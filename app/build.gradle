@@ -1,0 +1,51 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.hardening.blindspot'
+
+    // Use stable Android 14 (API 34) to avoid "Preview" errors
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.hardening.blindspot"
+        minSdk 26  // Android 8.0
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // This helps resolve some modern dependency issues
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    // 1. The Xposed Bridge (CRITICAL)
+    compileOnly 'de.robv.android.xposed:api:82'
+
+    // 2. Standard Android UI tools (Hardcoded versions to prevent errors)
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+
+    // Testing (You can ignore these, but good to keep)
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}

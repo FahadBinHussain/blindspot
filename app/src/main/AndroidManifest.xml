@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Blindspot">
+
+        <!-- 1. Tells LSPosed this is a module -->
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+
+        <!-- 2. This is the description users see in the LSPosed Manager -->
+        <meta-data
+            android:name="xposeddescription"
+            android:value="Hardening: Blocks Messenger Search to prevent relapse." />
+
+        <!-- 3. Matches the version of the Xposed API we used in build.gradle -->
+        <meta-data
+            android:name="xposedminversion"
+            android:value="82" />
+
+    </application>
+
+</manifest>
