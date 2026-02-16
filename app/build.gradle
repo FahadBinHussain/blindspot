@@ -2,6 +2,10 @@ plugins {
     id 'com.android.application'
 }
 
+def getTimestampVersionCode() {
+    return (System.currentTimeMillis() / 1000).toInteger()
+}
+
 android {
     namespace 'com.hardening.blindspot'
 
@@ -12,7 +16,7 @@ android {
         applicationId "com.hardening.blindspot"
         minSdk 26  // Android 8.0
         targetSdk 34
-        versionCode 1
+        versionCode getTimestampVersionCode()
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
