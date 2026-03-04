@@ -7,6 +7,7 @@
         tools:ignore="QueryAllPackagesPermission" />
 
     <application
+        android:name=".BlindSpotApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -44,6 +45,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- App Protection Activity -->
+        <activity
+            android:name=".AppProtectionActivity"
+            android:label="App Protection"
+            android:exported="false" />
 
         <receiver
             android:name=".BlindSpotAdminReceiver"

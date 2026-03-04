@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="12dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_revert"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="App Protection Manager"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Block = Suspend app (grayed) • Protect = Prevent uninstall + data clear"
+        android:textSize="12sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_unhide_all"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Unhide All Hidden Apps"
+        android:textAllCaps="false"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/search_apps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="🔍 Search apps..."
+        android:textColorHint="?android:attr/textColorHint"
+        android:textColor="?android:attr/textColorPrimary"
+        android:padding="12dp"
+        android:elevation="8dp"
+        android:background="?android:attr/colorBackground" />
+
+    <ListView
+        android:id="@+id/apps_protection_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>

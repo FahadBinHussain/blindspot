@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+<LinearLayout 
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Status Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:background="#E8F5E9"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/status_indicator"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⚠️ Not Device Owner"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#F44336" />
+
+        <Button
+            android:id="@+id/btn_refresh_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔄"
+            android:minWidth="0dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            style="?android:attr/buttonBarButtonStyle" />
+
+    </LinearLayout>
+
+    <!-- App Restrictions Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔧 App Restrictions Manager"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Search and Select App:"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp" />
+
+    <LinearLayout
+        android:id="@+id/selected_app_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/selected_app_icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="12dp"
+            android:src="@android:drawable/ic_menu_search"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/selected_app_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Tap to select an app..."
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary" />
+
+    </LinearLayout>
+    
+    <!-- Hidden AutoCompleteTextView and CheckBox for compatibility -->
+    <AutoCompleteTextView
+        android:id="@+id/app_search"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+    <CheckBox
+        android:id="@+id/show_all_apps"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:checked="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⚙️ Restriction Key:"
+        android:textStyle="bold"
+        android:layout_marginTop="12dp" />
+
+    <EditText
+        android:id="@+id/restriction_key"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g. disallowScreenshot" />
+
+    <Button
+        android:id="@+id/btn_discover"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔍 Discover Restrictions"
+        android:layout_gravity="end" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🎯 Restriction Value &amp; Type:"
+        android:textStyle="bold"
+        android:layout_marginTop="12dp" />
+
+    <!-- Single Value Container -->
+    <LinearLayout
+        android:id="@+id/single_value_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        
+        <EditText
+            android:id="@+id/restriction_value"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Value" />
+    </LinearLayout>
+
+    <!-- Array Value Container -->
+    <LinearLayout
+        android:id="@+id/array_value_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Array Items:"
+                android:textSize="12sp"
+                android:layout_gravity="center_vertical" />
+
+            <Button
+                android:id="@+id/btn_toggle_separator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Switch to Commas"
+                android:textSize="11sp"
+                android:minWidth="0dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                style="?android:attr/buttonBarButtonStyle" />
+
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/array_value_input"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:hint="e.g., https://example.com\nhttps://site.com\nor: site1.com, site2.com"
+            android:gravity="top|start"
+            android:inputType="textMultiLine"
+            android:layout_marginTop="4dp"
+            android:padding="12dp"
+            android:scrollbars="vertical" />
+
+        <Button
+            android:id="@+id/btn_open_full_editor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📝 Open Full Screen Editor"
+            android:layout_marginTop="4dp"
+            style="?android:attr/buttonBarButtonStyle" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <RadioGroup
+            android:id="@+id/value_type_group"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/type_string"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="String"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/type_int"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Int" />
+
+            <RadioButton
+                android:id="@+id/type_bool"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bool" />
+            
+            <RadioButton
+                android:id="@+id/type_string_array"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Array" />
+        </RadioGroup>
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_apply"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="✅ Apply Rule"
+        android:layout_marginTop="16dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="#CCCCCC"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Active Rules Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📋 Active Rules"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tap to edit • Long press to delete"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="8dp" />
+
+    <ListView
+        android:id="@+id/rules_list"
+        android:layout_width="match_parent"
+        android:layout_height="600dp"
+        android:paddingBottom="16dp"
+        android:clipToPadding="false"
+        android:nestedScrollingEnabled="true" />
+
+    <!-- External Rules Management -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btn_import_external"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Import External Rules"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btn_delete_external"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Delete External Rules"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+    
+    <!-- Export/Import Rules Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btn_export_rules"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Export Rules"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btn_import_rules"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Import Rules"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+</LinearLayout>
+
+</ScrollView>

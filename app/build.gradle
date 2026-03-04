@@ -47,6 +47,7 @@ dependencies {
     // 2. Standard Android UI tools (Hardcoded versions to prevent errors)
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.viewpager2:viewpager2:1.0.0'
 
     // Testing (You can ignore these, but good to keep)
     testImplementation 'junit:junit:4.13.2'
