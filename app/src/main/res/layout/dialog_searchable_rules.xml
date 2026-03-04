@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="?android:attr/colorBackground">
+
+    <EditText
+        android:id="@+id/search_rules"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="🔍 Search rules..."
+        android:textColorHint="?android:attr/textColorHint"
+        android:textColor="?android:attr/textColorPrimary"
+        android:padding="12dp"
+        android:drawablePadding="8dp" />
+
+    <ListView
+        android:id="@+id/rules_listview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>

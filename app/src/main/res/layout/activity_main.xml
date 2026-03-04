@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+<LinearLayout 
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Status Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:background="#E8F5E9"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/status_indicator"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⚠️ Not Device Owner"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#F44336" />
+
+        <Button
+            android:id="@+id/btn_refresh_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔄"
+            android:minWidth="0dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            style="?android:attr/buttonBarButtonStyle" />
+
+    </LinearLayout>
+
+    <!-- App Restrictions Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔧 App Restrictions Manager"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Search and Select App:"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp" />
+
+    <LinearLayout
+        android:id="@+id/selected_app_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/selected_app_icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="12dp"
+            android:src="@android:drawable/ic_menu_search"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/selected_app_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Tap to select an app..."
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary" />
+
+    </LinearLayout>
+    
+    <!-- Hidden AutoCompleteTextView and CheckBox for compatibility -->
+    <AutoCompleteTextView
+        android:id="@+id/app_search"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+    <CheckBox
+        android:id="@+id/show_all_apps"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:checked="true" />
+
+    <Button
+        android:id="@+id/btn_discover"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔍 Discover Available Rules"
+        android:layout_marginTop="4dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Rule Configuration Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Configure Rule:"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/key_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Rule Key (e.g., URLBlacklist)"
+        android:layout_marginTop="8dp"
+        android:padding="12dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Data Type:"
+        android:layout_marginTop="12dp"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/type_radio_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp">
+
+        <RadioButton
+            android:id="@+id/type_string"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="String"
+            android:checked="true" />
+
+        <RadioButton
+            android:id="@+id/type_integer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Integer" />
+
+        <RadioButton
+            android:id="@+id/type_boolean"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Boolean" />
+
+        <RadioButton
+            android:id="@+id/type_string_array"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Array" />
+
+    </RadioGroup>
+
+    <!-- Single Value Input (for String, Integer, Boolean) -->
+    <LinearLayout
+        android:id="@+id/single_value_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <EditText
+            android:id="@+id/value_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Value"
+            android:layout_marginTop="8dp"
+            android:padding="12dp" />
+
+    </LinearLayout>
+
+    <!-- Array Value Input (for StringArray) -->
+    <LinearLayout
+        android:id="@+id/array_value_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Array Items:"
+                android:textSize="12sp"
+                android:layout_gravity="center_vertical" />
+
+            <Button
+                android:id="@+id/btn_toggle_separator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Switch to Commas"
+                android:textSize="11sp"
+                android:minWidth="0dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                style="?android:attr/buttonBarButtonStyle" />
+
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/array_value_input"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:hint="e.g., https://example.com&#10;https://site.com&#10;or: site1.com, site2.com"
+            android:gravity="top|start"
+            android:inputType="textMultiLine"
+            android:layout_marginTop="4dp"
+            android:padding="12dp"
+            android:scrollbars="vertical" />
+
+        <Button
+            android:id="@+id/btn_open_full_editor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📝 Open Full Screen Editor"
+            android:layout_marginTop="4dp"
+            style="?android:attr/buttonBarButtonStyle" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_apply"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="✅ Apply Rule"
+        android:layout_marginTop="8dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Device Owner Transfer Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⚠️ Device Owner Transfer"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Transfer Admin to:"
+        android:layout_marginTop="8dp" />
+
+    <Spinner
+        android:id="@+id/admin_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btn_transfer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔐 Transfer Device Owner"
+        android:layout_marginTop="8dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Active Rules Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📋 Active Rules"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tap to edit • Long press to delete"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="8dp" />
+
+    <ListView
+        android:id="@+id/rules_list"
+        android:layout_width="match_parent"
+        android:layout_height="300dp" />
+
+</LinearLayout>
+
+</ScrollView>

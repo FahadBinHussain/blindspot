@@ -1,0 +1,7 @@
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <force-lock />
+    </uses-policies>
+    <!-- CRITICAL: This allows Andoff to send the role to BlindSpot and vice versa -->
+    <support-transfer-ownership />
+</device-admin>
