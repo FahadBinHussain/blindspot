@@ -13,8 +13,10 @@
         app:tabTextColor="#FFFFFF"
         app:tabSelectedTextColor="#FFFFFF"
         app:tabIndicatorColor="#FFFFFF"
-        app:tabMode="fixed"
-        app:tabGravity="fill" />
+        app:tabMode="scrollable"
+        app:tabGravity="fill"
+        app:tabMaxWidth="0dp"
+        app:tabMinWidth="80dp" />
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/view_pager"

@@ -1,5 +1,8 @@
 package com.hardening.blindspot;
 
+import android.content.Context;
+import android.database.Cursor;
+import android.net.Uri;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -12,18 +15,25 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class MessengerHook implements IXposedHookLoadPackage {
     private static final String TAG = "BLINDSPOT";
+    private static final Uri PREFS_URI = Uri.parse("content://com.hardening.blindspot.hooks/prefs");
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals("com.facebook.orca")) return;
 
-        Log.e(TAG, "!!! BLINDSPOT V3: GHOST-TOUCH PROTECTION ACTIVE !!!");
+        Log.e(TAG, "!!! BLINDSPOT V3: GHOST-TOUCH PROTECTION INITIALIZED !!!");
 
         // --- NEW: Block Focus Requests (Stops Keyboard) ---
         XposedHelpers.findAndHookMethod(View.class, "requestFocus", int.class, android.graphics.Rect.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 View v = (View) param.thisObject;
+                
+                // Check if hook is enabled
+                if (!isHookEnabled(v.getContext())) {
+                    return;
+                }
+                
                 if (shouldBlock(v)) {
                     param.setResult(false); // Cancel the focus request
                 }
@@ -35,11 +45,44 @@ public class MessengerHook implements IXposedHookLoadPackage {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 View v = (View) param.thisObject;
+                
+                // Check if hook is enabled
+                if (!isHookEnabled(v.getContext())) {
+                    return;
+                }
+                
                 if (shouldBlock(v)) {
                     nukeView(v);
                 }
             }
         });
+    }
+    
+    private boolean isHookEnabled(Context context) {
+        try {
+            Cursor cursor = context.getContentResolver().query(
+                PREFS_URI,
+                null,
+                null,
+                new String[]{"hook_messenger_enabled"},
+                null
+            );
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                String value = cursor.getString(cursor.getColumnIndex("value"));
+                cursor.close();
+                boolean enabled = "true".equals(value);
+                Log.e(TAG, "Hook enabled check via ContentProvider: " + enabled);
+                return enabled;
+            }
+            
+            if (cursor != null) cursor.close();
+            Log.e(TAG, "ContentProvider returned null/empty, defaulting to enabled");
+            return true; // Default to enabled if error
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading from ContentProvider: " + e.getMessage());
+            return true; // Default to enabled if error
+        }
     }
 
     // Helper to determine if a view is a target

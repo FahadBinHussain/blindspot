@@ -66,6 +66,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- Content Provider for hook preferences (accessible to hooked apps) -->
+        <provider
+            android:name=".HooksPreferenceProvider"
+            android:authorities="com.hardening.blindspot.hooks"
+            android:exported="true"
+            android:grantUriPermissions="true">
+            <grant-uri-permission android:pathPattern="/prefs" />
+        </provider>
+
     </application>
 
 </manifest>

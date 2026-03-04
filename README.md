@@ -41,6 +41,7 @@ BlindSpot includes three powerful Xposed modules for enhanced app behavior modif
 - Detects forbidden content automatically
 - Immediately closes app when prohibited content is detected
 - Provides parental control and content filtering
+- **Enable/Disable**: Toggle via Hooks tab, requires force stop to take effect
 
 #### 💬 Messenger Ghost-Touch Protection (`com.facebook.orca`)
 - Blocks Meta AI search features
@@ -48,6 +49,198 @@ BlindSpot includes three powerful Xposed modules for enhanced app behavior modif
 - Blocks focus requests to prevent keyboard appearance
 - Whitelists stickers, emojis, and GIFs
 - Removes unwanted UI elements
+- **Enable/Disable**: Toggle via Hooks tab with ContentProvider state management
+
+#### 📘 Facebook Continuous Scroll-Lock (`com.facebook.katana`)
+- Blocks infinite scrolling in Facebook Feed
+- Forces user to manually open posts (breaks doom-scroll cycle)
+- Hooks Activity lifecycle and touch events
+- Detects and blocks feed scrolling patterns
+- **Enable/Disable**: Toggle via Hooks tab with ContentProvider state management
+
+---
+
+## 🔬 Technical Deep Dive: Cross-App State Management
+
+### The Challenge
+BlindSpot needs to communicate hook enable/disable states from the main app to three separate Xposed hooks running in different app processes (Morphe, Messenger, Facebook). Modern Android security features make cross-app communication extremely challenging.
+
+### Failed Approaches & Lessons Learned
+
+#### ❌ Attempt 1: XSharedPreferences (Traditional Xposed Method)
+**Why it failed**: Android 7+ SELinux policies prevent apps from reading other apps' private files, even with world-readable permissions and `makeWorldReadable()`.
+
+**Symptoms**:
+```
+Prefs loaded: false
+All prefs keys: {}
+File exists but canRead: false
+```
+
+#### ❌ Attempt 2: ContentProvider (Standard Android IPC)
+**Why it failed**: Android 11+ package visibility restrictions prevent apps from seeing BlindSpot's package.
+
+**Symptoms**:
+```
+Provider info: NULL
+BlindSpot package NOT FOUND
+```
+
+**Resolution**: Works for Facebook & Messenger (both Facebook-owned apps), fails for Morphe (YouTube variant).
+
+#### ❌ Attempt 3: External Cache Files
+**Why it failed**: Scoped Storage (Android 10+) restricts cross-app file access, even to external cache directories.
+
+**Symptoms**:
+```
+File exists: true, CanRead: false
+```
+
+#### ❌ Attempt 4: Public Download Directory
+**Why it failed**: Security vulnerability - users could bypass restrictions by manually editing the file.
+
+#### ❌ Attempt 5: Broadcast Receivers
+**Why it failed**: Android 8+ restricts implicit broadcasts; explicit broadcasts require both apps to be running simultaneously.
+
+**Symptoms**:
+```
+Broadcast sent successfully
+Broadcast never received
+```
+
+#### ❌ Attempt 6: Direct File in BlindSpot Data Directory
+**Why it failed**: SELinux prevents cross-app access even with `chmod 777` and world-readable permissions.
+
+**Symptoms**:
+```
+chmod completed successfully
+exists=false from target app
+```
+
+#### ❌ Attempt 7: Shell-Forced XSharedPreferences
+**Why it failed**: Even with `Runtime.exec("chmod 644")`, SELinux still blocks read access.
+
+**Symptoms**:
+```
+Set permissions via shell: success
+File canRead: false
+```
+
+#### ❌ Attempt 8: Settings.System
+**Why it failed**: Requires `WRITE_SETTINGS` permission which needs explicit user approval via Settings UI.
+
+**Symptoms**:
+```
+SecurityException: WRITE_SETTINGS permission required
+```
+
+---
+
+### ✅ Final Working Solutions
+
+#### Solution 1: ContentProvider (Facebook & Messenger)
+**Implementation**: `HooksPreferenceProvider` at authority `com.hardening.blindspot.hooks`
+
+**Why it works**: Facebook and Messenger are both Facebook-owned apps and can see each other's packages.
+
+**Code Flow**:
+1. LSPosedFragment saves preference to SharedPreferences
+2. HooksPreferenceProvider serves preferences via cursor query
+3. Facebook/MessengerHook queries ContentProvider with key
+4. Returns "true"/"false" string from cursor
+
+**Key Code**:
+```java
+// Provider
+Cursor cursor = new MatrixCursor(new String[]{"key", "value"});
+cursor.addRow(new Object[]{key, prefs.getBoolean(key, true) ? "true" : "false"});
+
+// Hook
+Cursor cursor = context.getContentResolver().query(PREFS_URI, null, null, 
+    new String[]{"hook_facebook_enabled"}, null);
+String value = cursor.getString(cursor.getColumnIndex("value"));
+return "true".equals(value);
+```
+
+#### Solution 2: Settings.Global + Root Shell (Morphe)
+**Implementation**: Write to Android system settings database using `su` command
+
+**Why it works**: 
+- Settings.Global is globally accessible across all apps and processes
+- Root shell bypasses all permission checks
+- Persists across reboots and app restarts
+- Cannot be bypassed by user
+
+**Code Flow**:
+1. LSPosedFragment writes to Settings.Global using `su -c settings put global`
+2. MorpheHook reads from Settings.Global using standard ContentResolver API
+3. No permissions needed for reading global settings
+
+**Key Code**:
+```java
+// Writer (BlindSpot)
+String command = "settings put global blindspot_morphe_hook_enabled " + (enabled ? "1" : "0");
+Process process = Runtime.getRuntime().exec(new String[]{"su", "-c", command});
+
+// Reader (Morphe Hook)
+String value = Settings.Global.getString(context.getContentResolver(), 
+    "blindspot_morphe_hook_enabled");
+return !"0".equals(value); // Default enabled if null
+```
+
+**Advantages**:
+- ✅ Secure: Root-only write access
+- ✅ Global: Accessible from any app/process
+- ✅ Persistent: Survives reboots
+- ✅ Fast: Direct database access
+- ✅ Bypass-proof: User cannot modify without root
+
+**Requirements**:
+- Root access (already required for Xposed)
+- `su` binary available in PATH
+
+---
+
+### Architecture Summary
+
+```
+BlindSpot Main App
+    ├── LSPosedFragment (UI Controls)
+    │   ├── Saves to SharedPreferences
+    │   ├── Writes to Settings.Global (Morphe only)
+    │   └── Notifies HooksPreferenceProvider
+    │
+    └── HooksPreferenceProvider
+        └── Serves prefs to Facebook & Messenger
+        
+Xposed Hooks (Separate Processes)
+    ├── FacebookHook
+    │   └── Queries ContentProvider → "hook_facebook_enabled"
+    │
+    ├── MessengerHook
+    │   └── Queries ContentProvider → "hook_messenger_enabled"
+    │
+    └── MorpheHook
+        └── Reads Settings.Global → "blindspot_morphe_hook_enabled"
+```
+
+---
+
+## 🛡️ Security Considerations
+
+### Time Setting Protection
+- Uses `DevicePolicyManager.setAutoTimeRequired()` to enforce automatic time/timezone
+- Prevents users from bypassing delay locks by changing system time
+- Requires Device Owner privileges
+
+### Hook State Management
+- **Facebook/Messenger**: ContentProvider ensures only BlindSpot can write states
+- **Morphe**: Settings.Global with root prevents non-root user bypass
+- Default state: Enabled (fail-safe approach)
+
+---
+
+## 📋 Requirements
 
 #### 👤 Facebook Scroll-Lock & Feed Blocker (`com.facebook.katana`)
 - Prevents feed browsing and doom-scrolling

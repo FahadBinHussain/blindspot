@@ -1,7 +1,9 @@
 package com.hardening.blindspot;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -16,6 +18,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class FacebookHook implements IXposedHookLoadPackage {
     private static final String TAG = "BLINDSPOT_FB";
     private static final String FEED_ACTIVITY = "com.facebook.katana.activity.FbMainTabActivity";
+    private static final Uri PREFS_URI = Uri.parse("content://com.hardening.blindspot.hooks/prefs");
     
     private float startY = 0f;
     private static final int SCROLL_THRESHOLD = 120; // Lowered for faster reaction
@@ -24,13 +27,19 @@ public class FacebookHook implements IXposedHookLoadPackage {
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals("com.facebook.katana")) return;
 
-        Log.e(TAG, "!!! FB CONTINUOUS SCROLL-LOCK ACTIVE !!!");
+        Log.e(TAG, "!!! FB CONTINUOUS SCROLL-LOCK INITIALIZED !!!");
 
         // 1. URL LOGGER & INITIAL CHECK
         XposedHelpers.findAndHookMethod(Activity.class, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Activity activity = (Activity) param.thisObject;
+                
+                // Check if hook is enabled
+                if (!isHookEnabled(activity)) {
+                    return;
+                }
+                
                 processIncomingIntent(activity, activity.getIntent(), "ON_CREATE");
             }
         });
@@ -39,6 +48,12 @@ public class FacebookHook implements IXposedHookLoadPackage {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Activity activity = (Activity) param.thisObject;
+                
+                // Check if hook is enabled
+                if (!isHookEnabled(activity)) {
+                    return;
+                }
+                
                 processIncomingIntent(activity, (Intent) param.args[0], "ON_NEW_INTENT");
             }
         });
@@ -48,6 +63,12 @@ public class FacebookHook implements IXposedHookLoadPackage {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Activity activity = (Activity) param.thisObject;
+                
+                // Check if hook is enabled
+                if (!isHookEnabled(activity)) {
+                    return;
+                }
+                
                 MotionEvent event = (MotionEvent) param.args[0];
 
                 // --- MULTI-TOUCH PROTECTOR ---
@@ -82,6 +103,12 @@ public class FacebookHook implements IXposedHookLoadPackage {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 Activity activity = (Activity) param.thisObject;
+                
+                // Check if hook is enabled
+                if (!isHookEnabled(activity)) {
+                    return;
+                }
+                
                 if (activity.getClass().getName().contains(FEED_ACTIVITY)) {
                     Intent intent = activity.getIntent();
                     Uri data = (intent != null) ? intent.getData() : null;
@@ -111,6 +138,33 @@ public class FacebookHook implements IXposedHookLoadPackage {
                 }
             }
         });
+    }
+    
+    private boolean isHookEnabled(Context context) {
+        try {
+            Cursor cursor = context.getContentResolver().query(
+                PREFS_URI,
+                null,
+                null,
+                new String[]{"hook_facebook_enabled"},
+                null
+            );
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                String value = cursor.getString(cursor.getColumnIndex("value"));
+                cursor.close();
+                boolean enabled = "true".equals(value);
+                Log.e(TAG, "Hook enabled check via ContentProvider: " + enabled);
+                return enabled;
+            }
+            
+            if (cursor != null) cursor.close();
+            Log.e(TAG, "ContentProvider returned null/empty, defaulting to enabled");
+            return true; // Default to enabled if error
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading from ContentProvider: " + e.getMessage());
+            return true; // Default to enabled if error
+        }
     }
 
     private void processIncomingIntent(Activity activity, Intent intent, String trigger) {

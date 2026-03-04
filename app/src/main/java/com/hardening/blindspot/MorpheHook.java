@@ -1,6 +1,7 @@
 package com.hardening.blindspot;
 
 import android.app.Activity;
+import android.content.Context;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
@@ -31,7 +32,7 @@ public class MorpheHook implements IXposedHookLoadPackage {
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals("app.morphe.android.youtube")) return;
 
-        Log.e(TAG, "Morphe Content Watchdog Active");
+        Log.e(TAG, "Morphe Content Watchdog Initialized");
 
         // THE WATCHDOG: This hooks every single piece of text that appears on your screen
         XposedHelpers.findAndHookMethod(TextView.class, "onLayout", 
@@ -40,6 +41,12 @@ public class MorpheHook implements IXposedHookLoadPackage {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     TextView tv = (TextView) param.thisObject;
+                    
+                    // Check if hook is enabled
+                    if (!isHookEnabled(tv.getContext())) {
+                        return;
+                    }
+                    
                     String text = tv.getText().toString().toLowerCase();
 
                     if (isForbidden(text)) {
@@ -57,6 +64,14 @@ public class MorpheHook implements IXposedHookLoadPackage {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 if (param.args[0] == null) return;
+                
+                TextView tv = (TextView) param.thisObject;
+                
+                // Check if hook is enabled
+                if (!isHookEnabled(tv.getContext())) {
+                    return;
+                }
+                
                 String text = param.args[0].toString().toLowerCase();
 
                 if (isForbidden(text)) {
@@ -68,6 +83,28 @@ public class MorpheHook implements IXposedHookLoadPackage {
                 }
             }
         });
+    }
+    
+    private boolean isHookEnabled(Context context) {
+        try {
+            // Read from Settings.Global (globally accessible)
+            String value = android.provider.Settings.Global.getString(
+                context.getContentResolver(),
+                "blindspot_morphe_hook_enabled"
+            );
+            
+            boolean enabled = !"0".equals(value); // Default to enabled if not set or "1"
+            
+            // Log occasionally
+            if (Math.random() < 0.01) {
+                Log.e(TAG, "Hook enabled check from Settings.Global: " + enabled + " (value=" + value + ")");
+            }
+            
+            return enabled;
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading from Settings.Global: " + e.getMessage());
+            return true; // Default enabled
+        }
     }
 
     private boolean isForbidden(String query) {

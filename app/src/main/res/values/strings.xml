@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">blindspot</string>
+    
+    <!-- Hook Descriptions -->
+    <string name="hook_morphe_description">Hooks TextView display and setText methods to monitor all on-screen text. Automatically detects forbidden content and immediately closes the app when detected. Provides content filtering and parental control functionality.\n\n• State Management: Settings.Global + root shell (workaround for Android 11+ package visibility restrictions)</string>
+    
+    <string name="hook_messenger_description">Hooks View.requestFocus and View.onAttachedToWindow to block Meta AI search features. Removes and disables search bars, Meta AI prompts, and unwanted UI elements. Blocks focus requests to prevent keyboard from appearing on blocked elements. Whitelists stickers, emojis, and GIFs while blocking search functionality.\n\n• State Management: HooksPreferenceProvider (ContentProvider IPC)</string>
+    
+    <string name="hook_facebook_description">Hooks Activity lifecycle (onCreate, onNewIntent, onResume) and touch events (dispatchTouchEvent) to prevent feed browsing. Blocks scrolling by detecting touch movement above threshold. Detects and blocks multi-touch gestures. Automatically closes app when feed is accessed. Allows only direct links (messenger, profile, groups). Prevents doom-scrolling and time-wasting on Facebook feed.\n\n• State Management: HooksPreferenceProvider (ContentProvider IPC)</string>
 </resources>

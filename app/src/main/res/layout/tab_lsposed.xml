@@ -52,14 +52,38 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Morphe Content Watchdog"
-                    android:textSize="18sp"
-                    android:textColor="#4CAF50"
-                    android:textStyle="bold"
-                    android:paddingBottom="4dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Morphe Content Watchdog"
+                        android:textSize="18sp"
+                        android:textColor="#4CAF50"
+                        android:textStyle="bold"
+                        android:paddingBottom="4dp" />
+                    
+                    <ImageView
+                        android:id="@+id/info_morphe"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_menu_info_details"
+                        android:layout_marginEnd="8dp"
+                        android:tint="#888888"
+                        android:contentDescription="Hook Info" />
+
+                    <Switch
+                        android:id="@+id/switch_hook_morphe"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"
@@ -72,10 +96,58 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Hooks TextView display and setText methods to monitor all on-screen text. Automatically detects forbidden content and immediately closes the app when detected. Provides content filtering and parental control functionality."
+                    android:text="Content filtering and parental control"
                     android:textSize="13sp"
                     android:textColor="#FFFFFF"
                     android:lineSpacingMultiplier="1.2" />
+
+                <!-- Pending Action Area -->
+                <LinearLayout
+                    android:id="@+id/pending_morphe_area"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#3a3a3a"
+                    android:padding="8dp"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/pending_morphe_timer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="⏱️ Hook change pending: 5m 0s"
+                        android:textSize="12sp"
+                        android:textColor="#FFA726"
+                        android:paddingBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/pending_morphe_apply"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Apply Now"
+                            android:textSize="12sp"
+                            android:layout_marginEnd="4dp"
+                            android:visibility="gone" />
+
+                        <Button
+                            android:id="@+id/pending_morphe_cancel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Cancel"
+                            android:textSize="12sp"
+                            android:layout_marginStart="4dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -104,14 +176,38 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Messenger Ghost-Touch Protection"
-                    android:textSize="18sp"
-                    android:textColor="#4CAF50"
-                    android:textStyle="bold"
-                    android:paddingBottom="4dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Messenger Ghost-Touch Protection"
+                        android:textSize="18sp"
+                        android:textColor="#4CAF50"
+                        android:textStyle="bold"
+                        android:paddingBottom="4dp" />
+                    
+                    <ImageView
+                        android:id="@+id/info_messenger"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_menu_info_details"
+                        android:layout_marginEnd="8dp"
+                        android:tint="#888888"
+                        android:contentDescription="Hook Info" />
+
+                    <Switch
+                        android:id="@+id/switch_hook_messenger"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"
@@ -124,10 +220,58 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Hooks View.requestFocus and View.onAttachedToWindow to block Meta AI search features. Removes and disables search bars, Meta AI prompts, and unwanted UI elements. Blocks focus requests to prevent keyboard from appearing on blocked elements. Whitelists stickers, emojis, and GIFs while blocking search functionality."
+                    android:text="Blocks Meta AI search and unwanted UI"
                     android:textSize="13sp"
                     android:textColor="#FFFFFF"
                     android:lineSpacingMultiplier="1.2" />
+
+                <!-- Pending Action Area -->
+                <LinearLayout
+                    android:id="@+id/pending_messenger_area"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#3a3a3a"
+                    android:padding="8dp"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/pending_messenger_timer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="⏱️ Hook change pending: 5m 0s"
+                        android:textSize="12sp"
+                        android:textColor="#FFA726"
+                        android:paddingBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/pending_messenger_apply"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Apply Now"
+                            android:textSize="12sp"
+                            android:layout_marginEnd="4dp"
+                            android:visibility="gone" />
+
+                        <Button
+                            android:id="@+id/pending_messenger_cancel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Cancel"
+                            android:textSize="12sp"
+                            android:layout_marginStart="4dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -156,14 +300,38 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Facebook Scroll-Lock &amp; Feed Blocker"
-                    android:textSize="18sp"
-                    android:textColor="#4CAF50"
-                    android:textStyle="bold"
-                    android:paddingBottom="4dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Facebook Scroll-Lock &amp; Feed Blocker"
+                        android:textSize="18sp"
+                        android:textColor="#4CAF50"
+                        android:textStyle="bold"
+                        android:paddingBottom="4dp" />
+                    
+                    <ImageView
+                        android:id="@+id/info_facebook"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_menu_info_details"
+                        android:layout_marginEnd="8dp"
+                        android:tint="#888888"
+                        android:contentDescription="Hook Info" />
+
+                    <Switch
+                        android:id="@+id/switch_hook_facebook"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"
@@ -176,10 +344,58 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Hooks Activity lifecycle (onCreate, onNewIntent, onResume) and touch events (dispatchTouchEvent) to prevent feed browsing. Blocks scrolling by detecting touch movement above threshold. Detects and blocks multi-touch gestures. Automatically closes app when feed is accessed. Allows only direct links (messenger, profile, groups). Prevents doom-scrolling and time-wasting on Facebook feed."
+                    android:text="Prevents doom-scrolling and feed browsing"
                     android:textSize="13sp"
                     android:textColor="#FFFFFF"
                     android:lineSpacingMultiplier="1.2" />
+
+                <!-- Pending Action Area -->
+                <LinearLayout
+                    android:id="@+id/pending_facebook_area"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#3a3a3a"
+                    android:padding="8dp"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/pending_facebook_timer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="⏱️ Hook change pending: 5m 0s"
+                        android:textSize="12sp"
+                        android:textColor="#FFA726"
+                        android:paddingBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/pending_facebook_apply"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Apply Now"
+                            android:textSize="12sp"
+                            android:layout_marginEnd="4dp"
+                            android:visibility="gone" />
+
+                        <Button
+                            android:id="@+id/pending_facebook_cancel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Cancel"
+                            android:textSize="12sp"
+                            android:layout_marginStart="4dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 

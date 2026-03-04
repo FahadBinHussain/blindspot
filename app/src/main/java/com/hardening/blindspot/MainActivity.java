@@ -108,21 +108,24 @@ public class MainActivity extends FragmentActivity {
     }
     
     // Helper class for pending actions
-    private static class PendingAction {
-        enum ActionType {
+    public static class PendingAction {
+        public enum ActionType {
             RULE_DELETE,
             RULE_APPLY,
             APP_PROTECTION_CHANGE,
-            CHANGE_DELAY
+            CHANGE_DELAY,
+            HOOK_MORPHE_TOGGLE,
+            HOOK_MESSENGER_TOGGLE,
+            HOOK_FACEBOOK_TOGGLE
         }
         
-        ActionType type;
-        String identifier; // Rule position/index or package name
-        String data; // Additional data (rule entry, protection status, etc.)
-        long timestamp; // When action was requested
-        long expiryTime; // When timer expires (timestamp + delay)
+        public ActionType type;
+        public String identifier; // Rule position/index or package name
+        public String data; // Additional data (rule entry, protection status, etc.)
+        public long timestamp; // When action was requested
+        public long expiryTime; // When timer expires (timestamp + delay)
         
-        PendingAction(ActionType type, String identifier, String data, long delayMillis) {
+        public PendingAction(ActionType type, String identifier, String data, long delayMillis) {
             this.type = type;
             this.identifier = identifier;
             this.data = data;
@@ -130,11 +133,11 @@ public class MainActivity extends FragmentActivity {
             this.expiryTime = this.timestamp + delayMillis;
         }
         
-        long getRemainingMillis() {
+        public long getRemainingMillis() {
             return expiryTime - System.currentTimeMillis();
         }
         
-        boolean isExpired() {
+        public boolean isExpired() {
             return System.currentTimeMillis() >= expiryTime;
         }
     }
@@ -154,6 +157,24 @@ public class MainActivity extends FragmentActivity {
         dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
         adminComponent = new ComponentName(this, BlindSpotAdminReceiver.class);
         prefs = getSharedPreferences("BlindSpotRules", MODE_PRIVATE);
+        
+        // Make preferences world-readable for Xposed hooks
+        try {
+            java.io.File dataDir = new java.io.File(getApplicationInfo().dataDir);
+            java.io.File prefsDir = new java.io.File(dataDir, "shared_prefs");
+            java.io.File prefsFile = new java.io.File(prefsDir, "BlindSpotRules.xml");
+            
+            // Make directories and file readable
+            dataDir.setExecutable(true, false);
+            dataDir.setReadable(true, false);
+            prefsDir.setExecutable(true, false);
+            prefsDir.setReadable(true, false);
+            if (prefsFile.exists()) {
+                prefsFile.setReadable(true, false);
+            }
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Failed to set prefs readable: " + e.getMessage());
+        }
         
         // Check if we should redirect to AppProtectionActivity
         // Only redirect if not launched from launcher (i.e., app was in background)
@@ -198,6 +219,9 @@ public class MainActivity extends FragmentActivity {
                     break;
             }
         }).attach();
+        
+        // Load saved pending actions
+        loadPendingActions();
     }
     
     // Public method for RulesFragment to initialize its views
@@ -260,6 +284,7 @@ public class MainActivity extends FragmentActivity {
         
         btnApplyRulePending.setOnClickListener(v -> {
             pendingActions.remove("rule_apply");
+            savePendingActions();
             updateApplyRulePendingUI.run();
             
             if (!dpm.isDeviceOwnerApp(getPackageName())) {
@@ -272,6 +297,7 @@ public class MainActivity extends FragmentActivity {
         
         btnCancelApplyRule.setOnClickListener(v -> {
             pendingActions.remove("rule_apply");
+            savePendingActions();
             updateApplyRulePendingUI.run();
             Toast.makeText(this, "❌ Rule application cancelled", Toast.LENGTH_SHORT).show();
         });
@@ -382,6 +408,7 @@ public class MainActivity extends FragmentActivity {
                         delayMillis
                     );
                     pendingActions.put(pendingKey, action);
+                    savePendingActions();
                     updateApplyRulePendingUI.run();
                     startPendingActionsUpdater();
                 }
@@ -462,10 +489,44 @@ public class MainActivity extends FragmentActivity {
     // Public method for SettingsFragment to initialize its views
     public void initializeSettingsTab(View rootView) {
         EditText exportLocation = rootView.findViewById(R.id.export_location);
+        CheckBox disableTimeChangeCheckbox = rootView.findViewById(R.id.checkbox_disable_time_change);
         
         // Load saved location
         String savedLocation = prefs.getString("export_location", android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS).getAbsolutePath());
         exportLocation.setText(savedLocation);
+        
+        // Load disable time change setting
+        boolean disableTimeChange = prefs.getBoolean("disable_time_change", false);
+        disableTimeChangeCheckbox.setChecked(disableTimeChange);
+        
+        // Handle checkbox change
+        disableTimeChangeCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isProtectionLocked()) {
+                Toast.makeText(this, "Protection is locked. Cannot change this setting.", Toast.LENGTH_SHORT).show();
+                buttonView.setChecked(!isChecked); // Revert the change
+                return;
+            }
+            
+            prefs.edit().putBoolean("disable_time_change", isChecked).apply();
+            
+            if (isChecked) {
+                if (enforceAutoTimeSettings()) {
+                    Toast.makeText(this, "✅ Auto time/timezone required - Users cannot bypass delays", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "⚠️ Device admin permissions required", Toast.LENGTH_LONG).show();
+                    buttonView.setChecked(false);
+                    prefs.edit().putBoolean("disable_time_change", false).apply();
+                }
+            } else {
+                removeAutoTimeRestrictions();
+                Toast.makeText(this, "Auto time/timezone restrictions removed", Toast.LENGTH_SHORT).show();
+            }
+        });
+        
+        // Enforce on startup if enabled
+        if (disableTimeChange) {
+            enforceAutoTimeSettings();
+        }
         
         // Save settings button
         rootView.findViewById(R.id.btn_save_settings).setOnClickListener(v -> {
@@ -553,6 +614,7 @@ public class MainActivity extends FragmentActivity {
         // Apply button for change delay
         btnApplyChangeDelay.setOnClickListener(v -> {
             pendingActions.remove(changeDelayKey);
+            savePendingActions();
             updateChangeDelayPendingUI.run();
             
             // Enable UI for setting new delay
@@ -578,6 +640,7 @@ public class MainActivity extends FragmentActivity {
         // Cancel button for change delay
         btnCancelChangeDelay.setOnClickListener(v -> {
             pendingActions.remove(changeDelayKey);
+            savePendingActions();
             updateChangeDelayPendingUI.run();
             Toast.makeText(this, "❌ Change delay cancelled", Toast.LENGTH_SHORT).show();
         });
@@ -653,6 +716,7 @@ public class MainActivity extends FragmentActivity {
                         delayMillis
                     );
                     pendingActions.put(changeDelayKey, action);
+                    savePendingActions();
                     updateChangeDelayPendingUI.run();
                     startPendingActionsUpdater();
                     
@@ -736,6 +800,34 @@ public class MainActivity extends FragmentActivity {
             }
         };
         delayLockHandler.post(delayLockUpdater);
+    }
+    
+    // Time Setting Restriction Methods
+    private boolean enforceAutoTimeSettings() {
+        if (!dpm.isAdminActive(adminComponent)) {
+            return false;
+        }
+        
+        try {
+            // Require auto time and auto timezone
+            dpm.setAutoTimeRequired(adminComponent, true);
+            return true;
+        } catch (Exception e) {
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            return false;
+        }
+    }
+    
+    private void removeAutoTimeRestrictions() {
+        if (!dpm.isAdminActive(adminComponent)) {
+            return;
+        }
+        
+        try {
+            dpm.setAutoTimeRequired(adminComponent, false);
+        } catch (Exception e) {
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
     
     @Override
@@ -849,6 +941,92 @@ public class MainActivity extends FragmentActivity {
         long lockUntil = prefs.getLong("protection_locked_until", 0);
         long remaining = lockUntil - System.currentTimeMillis();
         return (remaining > 0) ? (remaining / 60000) + 1 : 0;
+    }
+    
+    // Public methods for LSPosedFragment to access pending actions
+    public java.util.concurrent.ConcurrentHashMap<String, PendingAction> getPendingActions() {
+        return pendingActions;
+    }
+    
+    public void addPendingAction(String key, PendingAction action) {
+        pendingActions.put(key, action);
+        savePendingActions();
+        startPendingActionsUpdater();
+    }
+    
+    public void removePendingAction(String key) {
+        pendingActions.remove(key);
+        savePendingActions();
+    }
+    
+    public PendingAction getPendingAction(String key) {
+        return pendingActions.get(key);
+    }
+    
+    private void savePendingActions() {
+        try {
+            SharedPreferences.Editor editor = prefs.edit();
+            java.util.Set<String> keys = pendingActions.keySet();
+            
+            // Clear old pending actions
+            for (String key : prefs.getAll().keySet()) {
+                if (key.startsWith("pending_")) {
+                    editor.remove(key);
+                }
+            }
+            
+            // Save current pending actions
+            for (String key : keys) {
+                PendingAction action = pendingActions.get(key);
+                if (action != null) {
+                    editor.putString("pending_" + key + "_type", action.type.name());
+                    editor.putString("pending_" + key + "_data", action.data);
+                    editor.putLong("pending_" + key + "_expiry", action.expiryTime);
+                }
+            }
+            editor.apply();
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Failed to save pending actions: " + e.getMessage());
+        }
+    }
+    
+    private void loadPendingActions() {
+        try {
+            java.util.Map<String, ?> allPrefs = prefs.getAll();
+            java.util.Set<String> pendingKeys = new java.util.HashSet<>();
+            
+            // Find all pending action keys
+            for (String key : allPrefs.keySet()) {
+                if (key.startsWith("pending_") && key.endsWith("_type")) {
+                    String pendingKey = key.substring(8, key.length() - 5); // Remove "pending_" and "_type"
+                    pendingKeys.add(pendingKey);
+                }
+            }
+            
+            // Load each pending action
+            for (String key : pendingKeys) {
+                String typeStr = prefs.getString("pending_" + key + "_type", null);
+                String data = prefs.getString("pending_" + key + "_data", "");
+                long expiryTime = prefs.getLong("pending_" + key + "_expiry", 0);
+                
+                if (typeStr != null && expiryTime > System.currentTimeMillis()) {
+                    try {
+                        PendingAction.ActionType type = PendingAction.ActionType.valueOf(typeStr);
+                        long delayMillis = expiryTime - System.currentTimeMillis();
+                        PendingAction action = new PendingAction(type, key, data, delayMillis);
+                        pendingActions.put(key, action);
+                    } catch (IllegalArgumentException e) {
+                        android.util.Log.e("MainActivity", "Invalid action type: " + typeStr);
+                    }
+                }
+            }
+            
+            if (!pendingActions.isEmpty()) {
+                startPendingActionsUpdater();
+            }
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Failed to load pending actions: " + e.getMessage());
+        }
     }
     
     private void unhideAllApps() {
@@ -1677,12 +1855,14 @@ public class MainActivity extends FragmentActivity {
                     // Apply button - execute the pending delete
                     applyButton.setOnClickListener(v -> {
                         pendingActions.remove(pendingKey);
+                        savePendingActions();
                         deleteRule(position);
                     });
                     
                     // Cancel button - remove pending action
                     cancelButton.setOnClickListener(v -> {
                         pendingActions.remove(pendingKey);
+                        savePendingActions();
                         notifyDataSetChanged();
                     });
                 } else {
@@ -1706,6 +1886,7 @@ public class MainActivity extends FragmentActivity {
                                 delayMillis
                             );
                             pendingActions.put(pendingKey, action);
+                            savePendingActions();
                             notifyDataSetChanged();
                             // Restart updater to handle new pending action
                             startPendingActionsUpdater();
@@ -1862,13 +2043,48 @@ public class MainActivity extends FragmentActivity {
                         filtered.addAll(originalList);
                     } else {
                         String filterPattern = constraint.toString().toLowerCase().trim();
+                        
+                        // Score each entry by relevance
+                        java.util.Map<RestrictionEntry, Integer> scoreMap = new java.util.HashMap<>();
+                        
                         for (RestrictionEntry entry : originalList) {
-                            if (entry.getKey().toLowerCase().contains(filterPattern) ||
-                                (entry.getTitle() != null && entry.getTitle().toLowerCase().contains(filterPattern)) ||
-                                (entry.getDescription() != null && entry.getDescription().toLowerCase().contains(filterPattern))) {
+                            int score = 0;
+                            String key = entry.getKey().toLowerCase();
+                            String title = entry.getTitle() != null ? entry.getTitle().toLowerCase() : "";
+                            String description = entry.getDescription() != null ? entry.getDescription().toLowerCase() : "";
+                            
+                            // Key matches are highest priority
+                            if (key.startsWith(filterPattern)) {
+                                score += 100;
+                            } else if (key.contains(filterPattern)) {
+                                score += 50;
+                            }
+                            
+                            // Title matches are medium priority
+                            if (title.startsWith(filterPattern)) {
+                                score += 30;
+                            } else if (title.contains(filterPattern)) {
+                                score += 15;
+                            }
+                            
+                            // Description matches are lowest priority
+                            if (description.contains(filterPattern)) {
+                                score += 5;
+                            }
+                            
+                            // If there's any match, add to results
+                            if (score > 0) {
+                                scoreMap.put(entry, score);
                                 filtered.add(entry);
                             }
                         }
+                        
+                        // Sort by score (highest first)
+                        filtered.sort((e1, e2) -> {
+                            int score1 = scoreMap.getOrDefault(e1, 0);
+                            int score2 = scoreMap.getOrDefault(e2, 0);
+                            return Integer.compare(score2, score1);
+                        });
                     }
                     
                     results.values = filtered;
@@ -2446,6 +2662,7 @@ public class MainActivity extends FragmentActivity {
                 
                 applyButton.setOnClickListener(v -> {
                     pendingActions.remove(pendingKey);
+                    savePendingActions();
                     // Apply the status change
                     updateAppProtectionStatusImmediate(app, pendingAction.data);
                     notifyDataSetChanged();
@@ -2453,6 +2670,7 @@ public class MainActivity extends FragmentActivity {
                 
                 cancelButton.setOnClickListener(v -> {
                     pendingActions.remove(pendingKey);
+                    savePendingActions();
                     notifyDataSetChanged();
                 });
             } else {
@@ -2534,6 +2752,7 @@ public class MainActivity extends FragmentActivity {
                         delayMillis
                     );
                     pendingActions.put(pendingKey, action);
+                    savePendingActions();
                     notifyDataSetChanged();
                     startPendingActionsUpdater();
                     return;
