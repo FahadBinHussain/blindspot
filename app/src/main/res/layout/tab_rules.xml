@@ -244,6 +244,56 @@
         android:text="✅ Apply Rule"
         android:layout_marginTop="16dp" />
 
+    <!-- Pending Action Area for Apply Rule -->
+    <LinearLayout
+        android:id="@+id/apply_rule_pending_area"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFF3E0"
+        android:padding="12dp"
+        android:layout_marginTop="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/apply_rule_pending_timer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⏱️ Rule application pending: 59s"
+            android:textSize="14sp"
+            android:textColor="#E65100"
+            android:gravity="center"
+            android:paddingBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_apply_rule_pending"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="✅ Apply Rule"
+                android:textAllCaps="false"
+                android:backgroundTint="#4CAF50"
+                android:layout_marginEnd="4dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_cancel_apply_rule"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Cancel"
+                android:textAllCaps="false"
+                android:backgroundTint="#FF5252" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="2dp"

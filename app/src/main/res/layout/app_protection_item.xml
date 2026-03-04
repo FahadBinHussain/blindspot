@@ -2,39 +2,97 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="12dp"
-    android:gravity="center_vertical">
+    android:orientation="vertical"
+    android:padding="12dp">
 
-    <ImageButton
-        android:id="@+id/btn_pin_app"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:src="@android:drawable/star_big_off"
-        android:contentDescription="Pin app"
-        android:layout_marginEnd="8dp" />
-
-    <ImageView
-        android:id="@+id/app_protection_icon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="12dp" />
-
-    <TextView
-        android:id="@+id/app_protection_name"
-        android:layout_width="0dp"
+    <!-- Main content area -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textSize="14sp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:maxLines="2"
-        android:ellipsize="end" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-    <Spinner
-        android:id="@+id/app_protection_spinner"
-        android:layout_width="wrap_content"
+        <ImageButton
+            android:id="@+id/btn_pin_app"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/star_big_off"
+            android:contentDescription="Pin app"
+            android:layout_marginEnd="8dp" />
+
+        <ImageView
+            android:id="@+id/app_protection_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="12dp" />
+
+        <TextView
+            android:id="@+id/app_protection_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:maxLines="2"
+            android:ellipsize="end" />
+
+        <Spinner
+            android:id="@+id/app_protection_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="120dp" />
+
+    </LinearLayout>
+
+    <!-- Pending action area -->
+    <LinearLayout
+        android:id="@+id/app_protection_pending_area"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minWidth="120dp" />
+        android:orientation="vertical"
+        android:background="#FFF3E0"
+        android:padding="12dp"
+        android:layout_marginTop="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/app_protection_pending_timer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⏱️ Protection change pending: 59s"
+            android:textSize="14sp"
+            android:textColor="#E65100"
+            android:gravity="center"
+            android:paddingBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_apply_app_protection"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="✅ Apply Change"
+                android:textAllCaps="false"
+                android:backgroundTint="#4CAF50"
+                android:layout_marginEnd="4dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_cancel_app_protection"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Cancel"
+                android:textAllCaps="false"
+                android:backgroundTint="#FF5252" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </LinearLayout>

@@ -20,9 +20,9 @@ public class TabsAdapter extends FragmentStateAdapter {
             case 1:
                 return new ProtectionFragment();
             case 2:
-                return new TransferFragment();
-            case 3:
                 return new SettingsFragment();
+            case 3:
+                return new LSPosedFragment();
             default:
                 return new RulesFragment();
         }

@@ -1,11 +1,9 @@
 package com.hardening.blindspot;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,9 +21,9 @@ public class ProtectionFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         
-        Button btnAppProtection = view.findViewById(R.id.btn_app_protection);
-        btnAppProtection.setOnClickListener(v -> {
-            startActivity(new Intent(getActivity(), AppProtectionActivity.class));
-        });
+        // Let MainActivity handle the initialization
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).initializeProtectionTab(view);
+        }
     }
 }

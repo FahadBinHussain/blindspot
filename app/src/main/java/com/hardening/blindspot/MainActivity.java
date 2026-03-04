@@ -28,6 +28,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -53,12 +54,23 @@ public class MainActivity extends FragmentActivity {
     private View singleValueContainer, arrayValueContainer;
     private ListView rulesListView;
     private ArrayAdapter<String> rulesAdapter;
+    private ActiveRulesAdapter activeRulesAdapter;
     private List<String> activeRulesList;
     private Map<String, String> appNameToPackageMap;
     private List<AppInfo> appInfoList;
     
-    // App Protection fields
-    // (Removed - now in separate activity)
+    // App Protection tab fields
+    private ListView protectionListView;
+    private EditText protectionSearchInput;
+    private List<AppProtectionInfo> protectionAllApps;
+    private AppProtectionAdapter protectionAdapter;
+    private TextView delayLockStatusView;
+    private android.os.Handler delayLockHandler;
+    private Runnable delayLockUpdater;
+    
+    // Pending actions updater
+    private android.os.Handler pendingActionsHandler;
+    private Runnable pendingActionsUpdater;
     
     // Helper class to store app info
     private static class AppInfo {
@@ -77,6 +89,62 @@ public class MainActivity extends FragmentActivity {
             return displayName;
         }
     }
+    
+    // Helper class for app protection info
+    private static class AppProtectionInfo {
+        String appName;
+        String packageName;
+        android.graphics.drawable.Drawable icon;
+        String status; // "default", "blocked", "protected"
+        boolean isPinned;
+
+        AppProtectionInfo(String appName, String packageName, android.graphics.drawable.Drawable icon, String status, boolean isPinned) {
+            this.appName = appName;
+            this.packageName = packageName;
+            this.icon = icon;
+            this.status = status;
+            this.isPinned = isPinned;
+        }
+    }
+    
+    // Helper class for pending actions
+    private static class PendingAction {
+        enum ActionType {
+            RULE_DELETE,
+            RULE_APPLY,
+            APP_PROTECTION_CHANGE,
+            CHANGE_DELAY
+        }
+        
+        ActionType type;
+        String identifier; // Rule position/index or package name
+        String data; // Additional data (rule entry, protection status, etc.)
+        long timestamp; // When action was requested
+        long expiryTime; // When timer expires (timestamp + delay)
+        
+        PendingAction(ActionType type, String identifier, String data, long delayMillis) {
+            this.type = type;
+            this.identifier = identifier;
+            this.data = data;
+            this.timestamp = System.currentTimeMillis();
+            this.expiryTime = this.timestamp + delayMillis;
+        }
+        
+        long getRemainingMillis() {
+            return expiryTime - System.currentTimeMillis();
+        }
+        
+        boolean isExpired() {
+            return System.currentTimeMillis() >= expiryTime;
+        }
+    }
+    
+    // Store pending actions
+    private final java.util.concurrent.ConcurrentHashMap<String, PendingAction> pendingActions = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    // Runnables to update pending UI
+    private Runnable updateChangeDelayPendingUI = null;
+    private Runnable updateApplyRulePendingUI = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,10 +191,10 @@ public class MainActivity extends FragmentActivity {
                     tab.setText("Protection");
                     break;
                 case 2:
-                    tab.setText("Transfer");
+                    tab.setText("Settings");
                     break;
                 case 3:
-                    tab.setText("Settings");
+                    tab.setText("Hooks");
                     break;
             }
         }).attach();
@@ -148,6 +216,68 @@ public class MainActivity extends FragmentActivity {
         singleValueContainer = rootView.findViewById(R.id.single_value_container);
         arrayValueContainer = rootView.findViewById(R.id.array_value_container);
         rulesListView = rootView.findViewById(R.id.rules_list);
+        
+        // Initialize apply rule pending action UI
+        LinearLayout applyRulePendingArea = rootView.findViewById(R.id.apply_rule_pending_area);
+        TextView applyRulePendingTimer = rootView.findViewById(R.id.apply_rule_pending_timer);
+        Button btnApplyRulePending = rootView.findViewById(R.id.btn_apply_rule_pending);
+        Button btnCancelApplyRule = rootView.findViewById(R.id.btn_cancel_apply_rule);
+        
+        // Store reference to update pending UI
+        updateApplyRulePendingUI = () -> {
+            String pendingKey = "rule_apply";
+            PendingAction action = pendingActions.get(pendingKey);
+            
+            if (action != null) {
+                applyRulePendingArea.setVisibility(View.VISIBLE);
+                long remainingMs = action.getRemainingMillis();
+                long totalSeconds = remainingMs / 1000;
+                
+                // Format time
+                long days = totalSeconds / (24 * 3600);
+                long hours = (totalSeconds % (24 * 3600)) / 3600;
+                long minutes = (totalSeconds % 3600) / 60;
+                long seconds = totalSeconds % 60;
+                
+                StringBuilder timeStr = new StringBuilder();
+                if (days > 0) timeStr.append(days).append("d ");
+                if (hours > 0 || days > 0) timeStr.append(hours).append("h ");
+                timeStr.append(minutes).append("m ");
+                timeStr.append(seconds).append("s");
+                
+                applyRulePendingTimer.setText("⏱️ Rule application pending: " + timeStr);
+                
+                if (action.isExpired()) {
+                    btnApplyRulePending.setVisibility(View.VISIBLE);
+                    applyRulePendingTimer.setText("✅ Ready to apply rule");
+                } else {
+                    btnApplyRulePending.setVisibility(View.GONE);
+                }
+            } else {
+                applyRulePendingArea.setVisibility(View.GONE);
+            }
+        };
+        
+        btnApplyRulePending.setOnClickListener(v -> {
+            pendingActions.remove("rule_apply");
+            updateApplyRulePendingUI.run();
+            
+            if (!dpm.isDeviceOwnerApp(getPackageName())) {
+                updateDeviceOwnerStatus();
+                Toast.makeText(this, "⚠️ Cannot apply: Not Device Owner.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            applyAndSaveRule();
+        });
+        
+        btnCancelApplyRule.setOnClickListener(v -> {
+            pendingActions.remove("rule_apply");
+            updateApplyRulePendingUI.run();
+            Toast.makeText(this, "❌ Rule application cancelled", Toast.LENGTH_SHORT).show();
+        });
+        
+        // Initial update
+        updateApplyRulePendingUI.run();
 
         updateDeviceOwnerStatus();
         setupAppSearch();
@@ -238,6 +368,26 @@ public class MainActivity extends FragmentActivity {
 
         // 2. APPLY BUTTON: Push rule to target app and save
         rootView.findViewById(R.id.btn_apply).setOnClickListener(v -> {
+            // Check if protection is locked
+            if (isProtectionLocked()) {
+                long delayMinutes = prefs.getLong("protection_delay_minutes", 0);
+                long delayMillis = delayMinutes * 60 * 1000L;
+                
+                if (delayMillis > 0) {
+                    String pendingKey = "rule_apply";
+                    PendingAction action = new PendingAction(
+                        PendingAction.ActionType.RULE_APPLY,
+                        pendingKey,
+                        "", // No data needed, form is already filled
+                        delayMillis
+                    );
+                    pendingActions.put(pendingKey, action);
+                    updateApplyRulePendingUI.run();
+                    startPendingActionsUpdater();
+                }
+                return;
+            }
+            
             if (!dpm.isDeviceOwnerApp(getPackageName())) {
                 updateDeviceOwnerStatus(); // Refresh the status
                 Toast.makeText(this, "⚠️ Cannot apply: Not Device Owner. See status above.", Toast.LENGTH_LONG).show();
@@ -273,30 +423,40 @@ public class MainActivity extends FragmentActivity {
             }
         });
         
-        // Long click to delete a rule
-        rulesListView.setOnItemLongClickListener((parent, view, position, id) -> {
-            if (position < activeRulesList.size()) {
-                deleteRule(position);
-                return true;
-            }
-            return false;
-        });
+        // Start pending actions updater
+        startPendingActionsUpdater();
     }
     
-    // Public method for TransferFragment to initialize its views
-    public void initializeTransferTab(View rootView) {
-        adminSpinner = rootView.findViewById(R.id.admin_spinner);
-        setupAdminDiscovery();
+    private void startPendingActionsUpdater() {
+        if (pendingActionsHandler != null) {
+            pendingActionsHandler.removeCallbacks(pendingActionsUpdater);
+        }
         
-        // 3. TRANSFER BUTTON: Hand over the DO role to any selected app
-        rootView.findViewById(R.id.btn_transfer).setOnClickListener(v -> {
-            AppInfo selectedApp = (AppInfo) adminSpinner.getSelectedItem();
-            if (selectedApp != null) {
-                transferOwnership(selectedApp.packageName);
-            } else {
-                Toast.makeText(this, "Please select an admin app", Toast.LENGTH_SHORT).show();
+        pendingActionsHandler = new android.os.Handler();
+        pendingActionsUpdater = new Runnable() {
+            @Override
+            public void run() {
+                // Update UI for all pending actions
+                if (activeRulesAdapter != null) {
+                    activeRulesAdapter.notifyDataSetChanged();
+                }
+                if (protectionAdapter != null) {
+                    protectionAdapter.notifyDataSetChanged();
+                }
+                if (updateChangeDelayPendingUI != null) {
+                    updateChangeDelayPendingUI.run();
+                }
+                if (updateApplyRulePendingUI != null) {
+                    updateApplyRulePendingUI.run();
+                }
+                
+                // Continue updating if there are pending actions or delay is locked
+                if (!pendingActions.isEmpty() || isProtectionLocked()) {
+                    pendingActionsHandler.postDelayed(this, 1000); // Update every second
+                }
             }
-        });
+        };
+        pendingActionsHandler.post(pendingActionsUpdater);
     }
     
     // Public method for SettingsFragment to initialize its views
@@ -313,6 +473,475 @@ public class MainActivity extends FragmentActivity {
             prefs.edit().putString("export_location", location).apply();
             Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
         });
+        
+        // Initialize delay lock UI
+        delayLockStatusView = rootView.findViewById(R.id.delay_lock_status);
+        TextView delayTimeDisplay = rootView.findViewById(R.id.delay_time_display);
+        LinearLayout changeDelayPendingArea = rootView.findViewById(R.id.change_delay_pending_area);
+        TextView changeDelayPendingTimer = rootView.findViewById(R.id.change_delay_pending_timer);
+        Button btnApplyChangeDelay = rootView.findViewById(R.id.btn_apply_change_delay);
+        Button btnCancelChangeDelay = rootView.findViewById(R.id.btn_cancel_change_delay);
+        
+        // Initialize pending time to 0
+        final long[] pendingTimeMinutes = {0};
+        
+        // Only show status if delay is locked
+        if (isProtectionLocked()) {
+            delayLockStatusView.setVisibility(View.VISIBLE);
+            updateDelayLockStatus(delayLockStatusView);
+            delayTimeDisplay.setVisibility(View.GONE);
+        } else {
+            delayLockStatusView.setVisibility(View.GONE);
+            delayTimeDisplay.setVisibility(View.GONE);
+        }
+        
+        // Get button references
+        Button btn1m = rootView.findViewById(R.id.btn_delay_1m);
+        Button btn10m = rootView.findViewById(R.id.btn_delay_10m);
+        Button btn1h = rootView.findViewById(R.id.btn_delay_1h);
+        Button btn1d = rootView.findViewById(R.id.btn_delay_1d);
+        Button btnActivate = rootView.findViewById(R.id.btn_activate_lock);
+        Button btnChangeDelay = rootView.findViewById(R.id.btn_change_delay);
+        Button btnReset = rootView.findViewById(R.id.btn_reset_delay);
+        
+        // Check for existing pending change delay action
+        String changeDelayKey = "change_delay";
+        PendingAction changePendingAction = pendingActions.get(changeDelayKey);
+        
+        // Update pending action UI (assign to field so updater can call it)
+        updateChangeDelayPendingUI = () -> {
+            PendingAction action = pendingActions.get(changeDelayKey);
+            boolean locked = isProtectionLocked();
+            boolean hasPendingChange = action != null;
+            
+            if (action != null) {
+                changeDelayPendingArea.setVisibility(View.VISIBLE);
+                long remainingMs = action.getRemainingMillis();
+                long totalSeconds = remainingMs / 1000;
+                
+                // Format time as days, hours, minutes, seconds
+                long days = totalSeconds / (24 * 3600);
+                long hours = (totalSeconds % (24 * 3600)) / 3600;
+                long minutes = (totalSeconds % 3600) / 60;
+                long seconds = totalSeconds % 60;
+                
+                StringBuilder timeStr = new StringBuilder();
+                if (days > 0) timeStr.append(days).append("d ");
+                if (hours > 0 || days > 0) timeStr.append(hours).append("h ");
+                timeStr.append(minutes).append("m ");
+                timeStr.append(seconds).append("s");
+                
+                changeDelayPendingTimer.setText("⏱️ Change delay pending: " + timeStr);
+                
+                if (action.isExpired()) {
+                    btnApplyChangeDelay.setVisibility(View.VISIBLE);
+                    changeDelayPendingTimer.setText("✅ Ready to change delay");
+                } else {
+                    btnApplyChangeDelay.setVisibility(View.GONE);
+                }
+                
+                // Hide Change Delay button while pending action is active
+                btnChangeDelay.setVisibility(View.GONE);
+            } else {
+                changeDelayPendingArea.setVisibility(View.GONE);
+                
+                // Show Change Delay button if locked and no pending action
+                btnChangeDelay.setVisibility(locked ? View.VISIBLE : View.GONE);
+            }
+        };
+        
+        // Apply button for change delay
+        btnApplyChangeDelay.setOnClickListener(v -> {
+            pendingActions.remove(changeDelayKey);
+            updateChangeDelayPendingUI.run();
+            
+            // Enable UI for setting new delay
+            delayLockStatusView.setVisibility(View.GONE);
+            delayTimeDisplay.setVisibility(View.GONE);
+            btn1m.setEnabled(true);
+            btn10m.setEnabled(true);
+            btn1h.setEnabled(true);
+            btn1d.setEnabled(true);
+            btnActivate.setVisibility(View.VISIBLE);
+            btnChangeDelay.setVisibility(View.GONE);
+            
+            // Reset protection lock
+            prefs.edit()
+                .putLong("protection_locked_until", 0)
+                .putLong("protection_delay_minutes", 0)
+                .apply();
+            updateDelayLockStatus(delayLockStatusView);
+            
+            Toast.makeText(this, "✅ You can now set a new delay", Toast.LENGTH_SHORT).show();
+        });
+        
+        // Cancel button for change delay
+        btnCancelChangeDelay.setOnClickListener(v -> {
+            pendingActions.remove(changeDelayKey);
+            updateChangeDelayPendingUI.run();
+            Toast.makeText(this, "❌ Change delay cancelled", Toast.LENGTH_SHORT).show();
+        });
+        
+        // Initial update
+        updateChangeDelayPendingUI.run();
+        
+        // Update UI based on lock status
+        boolean locked = isProtectionLocked();
+        boolean hasPendingChange = pendingActions.containsKey(changeDelayKey);
+        btn1m.setEnabled(!locked && !hasPendingChange);
+        btn10m.setEnabled(!locked && !hasPendingChange);
+        btn1h.setEnabled(!locked && !hasPendingChange);
+        btn1d.setEnabled(!locked && !hasPendingChange);
+        btnActivate.setVisibility(locked || hasPendingChange ? View.GONE : View.VISIBLE);
+        btnChangeDelay.setVisibility(locked && !hasPendingChange ? View.VISIBLE : View.GONE);
+        
+        // Delay lock buttons - add to pending time
+        btn1m.setOnClickListener(v -> {
+            pendingTimeMinutes[0] += 1;
+            delayTimeDisplay.setVisibility(View.VISIBLE);
+            updatePendingTimeDisplay(delayTimeDisplay, pendingTimeMinutes[0]);
+        });
+        btn10m.setOnClickListener(v -> {
+            pendingTimeMinutes[0] += 10;
+            delayTimeDisplay.setVisibility(View.VISIBLE);
+            updatePendingTimeDisplay(delayTimeDisplay, pendingTimeMinutes[0]);
+        });
+        btn1h.setOnClickListener(v -> {
+            pendingTimeMinutes[0] += 60;
+            delayTimeDisplay.setVisibility(View.VISIBLE);
+            updatePendingTimeDisplay(delayTimeDisplay, pendingTimeMinutes[0]);
+        });
+        btn1d.setOnClickListener(v -> {
+            pendingTimeMinutes[0] += 1440;
+            delayTimeDisplay.setVisibility(View.VISIBLE);
+            updatePendingTimeDisplay(delayTimeDisplay, pendingTimeMinutes[0]);
+        });
+        
+        // Set Delay button (when not locked)
+        btnActivate.setOnClickListener(v -> {
+            if (pendingTimeMinutes[0] == 0) {
+                Toast.makeText(this, "⚠️ Please set a time first", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            activateDelayLock(pendingTimeMinutes[0], delayLockStatusView);
+            pendingTimeMinutes[0] = 0;
+            updateDelayLockStatus(delayLockStatusView);
+            
+            // Update UI to locked state
+            delayLockStatusView.setVisibility(View.VISIBLE);
+            delayTimeDisplay.setVisibility(View.GONE);
+            btn1m.setEnabled(false);
+            btn10m.setEnabled(false);
+            btn1h.setEnabled(false);
+            btn1d.setEnabled(false);
+            btnActivate.setVisibility(View.GONE);
+            btnChangeDelay.setVisibility(View.VISIBLE);
+        });
+        
+        // Change Delay button (when locked - creates pending action)
+        btnChangeDelay.setOnClickListener(v -> {
+            if (isProtectionLocked()) {
+                // Use the full delay duration, not the remaining time
+                long delayMinutes = prefs.getLong("protection_delay_minutes", 0);
+                long delayMillis = delayMinutes * 60 * 1000L;
+                
+                if (delayMillis > 0) {
+                    PendingAction action = new PendingAction(
+                        PendingAction.ActionType.CHANGE_DELAY,
+                        changeDelayKey,
+                        "",
+                        delayMillis
+                    );
+                    pendingActions.put(changeDelayKey, action);
+                    updateChangeDelayPendingUI.run();
+                    startPendingActionsUpdater();
+                    
+                    Toast.makeText(this, "⏱️ Change delay request pending...", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        
+        // Reset delay button (for testing only - bypasses timer)
+        btnReset.setOnClickListener(v -> {
+            prefs.edit()
+                .putLong("protection_locked_until", 0)
+                .putLong("protection_delay_minutes", 0)
+                .apply();
+            pendingTimeMinutes[0] = 0;
+            delayLockStatusView.setVisibility(View.GONE);
+            delayTimeDisplay.setVisibility(View.GONE);
+            btn1m.setEnabled(true);
+            btn10m.setEnabled(true);
+            btn1h.setEnabled(true);
+            btn1d.setEnabled(true);
+            btnActivate.setVisibility(View.VISIBLE);
+            btnChangeDelay.setVisibility(View.GONE);
+            Toast.makeText(this, "✅ Protection lock reset", Toast.LENGTH_SHORT).show();
+        });
+        
+        // Initialize transfer section
+        adminSpinner = rootView.findViewById(R.id.admin_spinner);
+        setupAdminDiscovery();
+        
+        // Transfer button: Hand over the DO role to any selected app
+        rootView.findViewById(R.id.btn_transfer).setOnClickListener(v -> {
+            AppInfo selectedApp = (AppInfo) adminSpinner.getSelectedItem();
+            if (selectedApp != null) {
+                transferOwnership(selectedApp.packageName);
+            } else {
+                Toast.makeText(this, "Please select an admin app", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    // Public method for ProtectionFragment to initialize its views
+    public void initializeProtectionTab(View rootView) {
+        protectionListView = rootView.findViewById(R.id.apps_protection_list);
+        protectionSearchInput = rootView.findViewById(R.id.search_apps);
+        
+        // Unhide all button
+        rootView.findViewById(R.id.btn_unhide_all).setOnClickListener(v -> unhideAllApps());
+        
+        // Load apps
+        loadProtectionApps();
+        
+        // Search filter
+        protectionSearchInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (protectionAdapter != null) {
+                    protectionAdapter.getFilter().filter(s);
+                }
+            }
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+    }
+    
+    private void startDelayLockCountdown() {
+        if (delayLockHandler != null) {
+            delayLockHandler.removeCallbacks(delayLockUpdater);
+        }
+        
+        delayLockHandler = new android.os.Handler();
+        delayLockUpdater = new Runnable() {
+            @Override
+            public void run() {
+                if (delayLockStatusView != null) {
+                    updateDelayLockStatusWithCountdown(delayLockStatusView);
+                    delayLockHandler.postDelayed(this, 1000); // Update every second
+                }
+            }
+        };
+        delayLockHandler.post(delayLockUpdater);
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (delayLockHandler != null && delayLockUpdater != null) {
+            delayLockHandler.removeCallbacks(delayLockUpdater);
+        }
+        if (pendingActionsHandler != null && pendingActionsUpdater != null) {
+            pendingActionsHandler.removeCallbacks(pendingActionsUpdater);
+        }
+    }
+    
+    private void updatePendingTimeDisplay(TextView displayView, long minutes) {
+        long totalSeconds = minutes * 60;
+        long days = totalSeconds / (24 * 3600);
+        long hours = (totalSeconds % (24 * 3600)) / 3600;
+        long mins = (totalSeconds % 3600) / 60;
+        long secs = totalSeconds % 60;
+        
+        StringBuilder timeStr = new StringBuilder("Pending Time: ");
+        if (days > 0) timeStr.append(days).append("d ");
+        if (hours > 0 || days > 0) timeStr.append(hours).append("h ");
+        timeStr.append(mins).append("m ");
+        timeStr.append(secs).append("s");
+        
+        displayView.setText(timeStr.toString());
+        displayView.setTextColor(minutes > 0 ? 0xFFFFA500 : 0xFF888888);
+    }
+    
+    private void activateDelayLock(long minutes, TextView statusView) {
+        long lockUntil = System.currentTimeMillis() + (minutes * 60 * 1000L);
+        prefs.edit()
+            .putLong("protection_locked_until", lockUntil)
+            .putLong("protection_delay_minutes", minutes)
+            .apply();
+        updateDelayLockStatus(statusView);
+        
+        String timeAdded = minutes < 60 ? minutes + " minutes" : (minutes < 1440 ? (minutes / 60) + " hour(s)" : (minutes / 1440) + " day(s)");
+        Toast.makeText(this, "🔒 Protection locked for " + timeAdded, Toast.LENGTH_LONG).show();
+    }
+    
+    
+    private void updateDelayLockStatus(TextView statusView) {
+        long lockUntil = prefs.getLong("protection_locked_until", 0);
+        long now = System.currentTimeMillis();
+        
+        if (lockUntil > now) {
+            // Get the delay duration that was set
+            long totalMinutes = prefs.getLong("protection_delay_minutes", 0);
+            
+            // Calculate days, hours, minutes without rounding
+            long days = totalMinutes / 1440;
+            long remainingAfterDays = totalMinutes % 1440;
+            long hours = remainingAfterDays / 60;
+            long minutes = remainingAfterDays % 60;
+            
+            StringBuilder delayText = new StringBuilder();
+            if (days > 0) {
+                delayText.append(days).append(" day").append(days != 1 ? "s" : "");
+            }
+            if (hours > 0) {
+                if (delayText.length() > 0) delayText.append(" ");
+                delayText.append(hours).append(" hour").append(hours != 1 ? "s" : "");
+            }
+            if (minutes > 0) {
+                if (delayText.length() > 0) delayText.append(" ");
+                delayText.append(minutes).append(" minute").append(minutes != 1 ? "s" : "");
+            }
+            
+            statusView.setText("Current Delay: " + delayText);
+            statusView.setTextColor(0xFFFF5252); // Red
+        } else {
+            statusView.setText("Status: ✅ Unlocked");
+            statusView.setTextColor(0xFF4CAF50); // Green
+        }
+    }
+    
+    private void updateDelayLockStatusWithCountdown(TextView statusView) {
+        long lockUntil = prefs.getLong("protection_locked_until", 0);
+        long now = System.currentTimeMillis();
+        
+        if (lockUntil > now) {
+            long remainingMillis = lockUntil - now;
+            long totalSeconds = remainingMillis / 1000;
+            long days = totalSeconds / (24 * 3600);
+            long hours = (totalSeconds % (24 * 3600)) / 3600;
+            long minutes = (totalSeconds % 3600) / 60;
+            long seconds = totalSeconds % 60;
+            
+            StringBuilder timeRemaining = new StringBuilder();
+            if (days > 0) timeRemaining.append(days).append("d ");
+            if (hours > 0 || days > 0) timeRemaining.append(hours).append("h ");
+            timeRemaining.append(minutes).append("m ");
+            timeRemaining.append(seconds).append("s");
+            
+            statusView.setText("Status: 🔒 LOCKED (" + timeRemaining + " remaining)");
+            statusView.setTextColor(0xFFFF5252); // Red
+        } else {
+            statusView.setText("Status: ✅ Unlocked");
+            statusView.setTextColor(0xFF4CAF50); // Green
+        }
+    }
+    
+    private boolean isProtectionLocked() {
+        long lockUntil = prefs.getLong("protection_locked_until", 0);
+        return System.currentTimeMillis() < lockUntil;
+    }
+    
+    private long getRemainingLockMinutes() {
+        long lockUntil = prefs.getLong("protection_locked_until", 0);
+        long remaining = lockUntil - System.currentTimeMillis();
+        return (remaining > 0) ? (remaining / 60000) + 1 : 0;
+    }
+    
+    private void unhideAllApps() {
+        try {
+            PackageManager pm = getPackageManager();
+            List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_UNINSTALLED_PACKAGES);
+            
+            int unhiddenCount = 0;
+            for (ApplicationInfo appInfo : packages) {
+                try {
+                    // Try to unhide the app
+                    dpm.setApplicationHidden(adminComponent, appInfo.packageName, false);
+                    unhiddenCount++;
+                } catch (Exception e) {}
+            }
+            
+            Toast.makeText(this, "✅ Processed " + unhiddenCount + " apps", Toast.LENGTH_LONG).show();
+            
+            // Reload the list
+            loadProtectionApps();
+        } catch (Exception e) {
+            Toast.makeText(this, "❌ Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    private void loadProtectionApps() {
+        PackageManager pm = getPackageManager();
+        protectionAllApps = new ArrayList<>();
+        
+        Set<String> blockedApps = prefs.getStringSet("blocked_apps", new HashSet<>());
+        Set<String> protectedApps = prefs.getStringSet("protected_apps", new HashSet<>());
+
+        try {
+            List<ApplicationInfo> packages = pm.getInstalledApplications(0);
+            for (ApplicationInfo appInfo : packages) {
+                // Skip system apps without launcher icon
+                Intent launchIntent = pm.getLaunchIntentForPackage(appInfo.packageName);
+                if (launchIntent == null && (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
+                    continue;
+                }
+
+                String appName = pm.getApplicationLabel(appInfo).toString();
+                android.graphics.drawable.Drawable icon = pm.getApplicationIcon(appInfo);
+                
+                String status = "default";
+                if (blockedApps.contains(appInfo.packageName)) {
+                    status = "blocked";
+                } else if (protectedApps.contains(appInfo.packageName)) {
+                    status = "protected";
+                } else {
+                    // Check if blocked/protected by other admins
+                    try {
+                        // Check if app is suspended (blocked)
+                        boolean isSuspended = pm.isPackageSuspended(appInfo.packageName);
+                        if (isSuspended) {
+                            status = "blocked";
+                        } else if (dpm.isUninstallBlocked(adminComponent, appInfo.packageName)) {
+                            status = "protected";
+                        }
+                    } catch (Exception e) {}
+                }
+
+                protectionAllApps.add(new AppProtectionInfo(appName, appInfo.packageName, icon, status, false));
+            }
+        } catch (Exception e) {}
+
+        // Load pinned apps
+        Set<String> pinnedApps = prefs.getStringSet("pinned_apps", new HashSet<>());
+        for (AppProtectionInfo app : protectionAllApps) {
+            app.isPinned = pinnedApps.contains(app.packageName);
+        }
+
+        // Sort: pinned first, then blocked/protected, then alphabetically
+        Collections.sort(protectionAllApps, (a, b) -> {
+            // Priority: pinned first
+            if (a.isPinned != b.isPinned) {
+                return a.isPinned ? -1 : 1;
+            }
+            
+            // Then: blocked > protected > default
+            int priorityA = a.status.equals("blocked") ? 0 : (a.status.equals("protected") ? 1 : 2);
+            int priorityB = b.status.equals("blocked") ? 0 : (b.status.equals("protected") ? 1 : 2);
+            
+            if (priorityA != priorityB) {
+                return Integer.compare(priorityA, priorityB);
+            }
+            
+            // Same priority, sort alphabetically
+            return a.appName.compareToIgnoreCase(b.appName);
+        });
+
+        protectionAdapter = new AppProtectionAdapter(this, protectionAllApps);
+        protectionListView.setAdapter(protectionAdapter);
     }
 
     private void updateDeviceOwnerStatus() {
@@ -881,8 +1510,8 @@ public class MainActivity extends FragmentActivity {
         
         android.util.Log.d("RULES_DEBUG", "Final displayList size: " + displayList.size());
         
-        ActiveRulesAdapter adapter = new ActiveRulesAdapter(this, displayList);
-        rulesListView.setAdapter(adapter);
+        activeRulesAdapter = new ActiveRulesAdapter(this, displayList);
+        rulesListView.setAdapter(activeRulesAdapter);
     }
     
     // Helper class for active rule display
@@ -907,7 +1536,7 @@ public class MainActivity extends FragmentActivity {
     }
     
     // Custom adapter for active rules with icons
-    private static class ActiveRulesAdapter extends BaseAdapter {
+    private class ActiveRulesAdapter extends BaseAdapter {
         private Context context;
         private List<ActiveRuleInfo> rules;
         
@@ -959,6 +1588,7 @@ public class MainActivity extends FragmentActivity {
             TextView typeBadge = convertView.findViewById(R.id.active_rule_type_badge);
             TextView adminView = convertView.findViewById(R.id.active_rule_admin);
             TextView adminBadge = convertView.findViewById(R.id.active_rule_admin_badge);
+            Button deleteButton = convertView.findViewById(R.id.btn_delete_active_rule);
             
             ActiveRuleInfo rule = rules.get(position);
             if (rule != null) {
@@ -1007,6 +1637,84 @@ public class MainActivity extends FragmentActivity {
                         typeBadge.setBackgroundColor(0xFF757575); // Grey
                         break;
                 }
+                
+                // Initialize pending action area
+                LinearLayout pendingArea = convertView.findViewById(R.id.pending_action_area);
+                TextView pendingTimer = convertView.findViewById(R.id.pending_action_timer);
+                Button applyButton = convertView.findViewById(R.id.btn_apply_pending);
+                Button cancelButton = convertView.findViewById(R.id.btn_cancel_pending);
+                
+                String pendingKey = "rule_delete_" + position;
+                PendingAction pendingAction = pendingActions.get(pendingKey);
+                
+                if (pendingAction != null) {
+                    // Show pending action area
+                    pendingArea.setVisibility(View.VISIBLE);
+                    long remainingMs = pendingAction.getRemainingMillis();
+                    long totalSeconds = remainingMs / 1000;
+                    
+                    // Format time as days, hours, minutes, seconds
+                    long days = totalSeconds / (24 * 3600);
+                    long hours = (totalSeconds % (24 * 3600)) / 3600;
+                    long minutes = (totalSeconds % 3600) / 60;
+                    long seconds = totalSeconds % 60;
+                    
+                    StringBuilder timeStr = new StringBuilder();
+                    if (days > 0) timeStr.append(days).append("d ");
+                    if (hours > 0 || days > 0) timeStr.append(hours).append("h ");
+                    timeStr.append(minutes).append("m ");
+                    timeStr.append(seconds).append("s");
+                    
+                    pendingTimer.setText("⏱️ Delete pending: " + timeStr);
+                    
+                    if (pendingAction.isExpired()) {
+                        applyButton.setVisibility(View.VISIBLE);
+                        pendingTimer.setText("✅ Ready to delete");
+                    } else {
+                        applyButton.setVisibility(View.GONE);
+                    }
+                    
+                    // Apply button - execute the pending delete
+                    applyButton.setOnClickListener(v -> {
+                        pendingActions.remove(pendingKey);
+                        deleteRule(position);
+                    });
+                    
+                    // Cancel button - remove pending action
+                    cancelButton.setOnClickListener(v -> {
+                        pendingActions.remove(pendingKey);
+                        notifyDataSetChanged();
+                    });
+                } else {
+                    // Hide pending action area
+                    pendingArea.setVisibility(View.GONE);
+                }
+                
+                // Set up delete button click listener
+                deleteButton.setOnClickListener(v -> {
+                    if (isProtectionLocked()) {
+                        // Create pending action using full delay duration
+                        long delayMinutes = prefs.getLong("protection_delay_minutes", 0);
+                        long delayMillis = delayMinutes * 60 * 1000L;
+                        
+                        if (delayMillis > 0) {
+                            String entry = activeRulesList.get(position);
+                            PendingAction action = new PendingAction(
+                                PendingAction.ActionType.RULE_DELETE,
+                                pendingKey,
+                                entry,
+                                delayMillis
+                            );
+                            pendingActions.put(pendingKey, action);
+                            notifyDataSetChanged();
+                            // Restart updater to handle new pending action
+                            startPendingActionsUpdater();
+                        }
+                    } else {
+                        // Execute immediately if not locked
+                        deleteRule(position);
+                    }
+                });
             }
             
             return convertView;
@@ -1048,7 +1756,7 @@ public class MainActivity extends FragmentActivity {
                 return;
             }
             
-            RuleAdapter adapter = new RuleAdapter(this, entries);
+            RuleAdapter adapter = new RuleAdapter(this, entries, false); // Don't show delete button for discovered restrictions
             listView.setAdapter(adapter);
             
             searchInput.addTextChangedListener(new TextWatcher() {
@@ -1079,15 +1787,21 @@ public class MainActivity extends FragmentActivity {
     }
     
     // Custom adapter for searchable rules
-    private static class RuleAdapter extends BaseAdapter implements Filterable {
+    private class RuleAdapter extends BaseAdapter implements Filterable {
         private Context context;
         private List<RestrictionEntry> originalList;
         private List<RestrictionEntry> filteredList;
+        private boolean showDeleteButton;
         
         public RuleAdapter(Context context, List<RestrictionEntry> entries) {
+            this(context, entries, true); // Default to showing delete button for active rules
+        }
+        
+        public RuleAdapter(Context context, List<RestrictionEntry> entries, boolean showDeleteButton) {
             this.context = context;
             this.originalList = entries;
             this.filteredList = new ArrayList<>(entries);
+            this.showDeleteButton = showDeleteButton;
         }
         
         @Override
@@ -1109,12 +1823,28 @@ public class MainActivity extends FragmentActivity {
             TextView keyView = convertView.findViewById(R.id.rule_key);
             TextView titleView = convertView.findViewById(R.id.rule_title);
             TextView descView = convertView.findViewById(R.id.rule_description);
+            Button deleteButton = convertView.findViewById(R.id.btn_delete_rule);
             
             RestrictionEntry entry = filteredList.get(position);
             if (entry != null) {
                 keyView.setText(entry.getKey());
                 titleView.setText(getEntryTypeString(entry.getType()));
                 descView.setText(entry.getDescription() != null ? entry.getDescription() : "No description");
+                
+                // Show or hide delete button based on context
+                if (showDeleteButton) {
+                    deleteButton.setVisibility(View.VISIBLE);
+                    // Set up delete button click listener
+                    deleteButton.setOnClickListener(v -> {
+                        // Find the position in the original activeRulesList
+                        int originalPosition = activeRulesList.indexOf(entry);
+                        if (originalPosition != -1) {
+                            deleteRule(originalPosition);
+                        }
+                    });
+                } else {
+                    deleteButton.setVisibility(View.GONE);
+                }
             }
             
             return convertView;
@@ -1154,7 +1884,7 @@ public class MainActivity extends FragmentActivity {
             };
         }
         
-        private static String getEntryTypeString(int type) {
+        private String getEntryTypeString(int type) {
             switch (type) {
                 case RestrictionEntry.TYPE_BOOLEAN: return "Boolean";
                 case RestrictionEntry.TYPE_INTEGER: return "Integer";
@@ -1632,5 +2362,298 @@ public class MainActivity extends FragmentActivity {
             })
             .setNegativeButton("Cancel", null)
             .show();
+    }
+    
+    // AppProtectionAdapter for the Protection tab
+    private class AppProtectionAdapter extends BaseAdapter implements android.widget.Filterable {
+        private Context context;
+        private PackageManager pm;
+        private List<AppProtectionInfo> originalList;
+        private List<AppProtectionInfo> filteredList;
+        private String[] statusOptions = {"Default", "Blocked", "Protected"};
+
+        AppProtectionAdapter(Context context, List<AppProtectionInfo> apps) {
+            this.context = context;
+            this.pm = context.getPackageManager();
+            this.originalList = new ArrayList<>(apps);
+            this.filteredList = new ArrayList<>(apps);
+        }
+
+        @Override
+        public int getCount() {
+            return filteredList.size();
+        }
+
+        @Override
+        public AppProtectionInfo getItem(int position) {
+            return filteredList.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            if (convertView == null) {
+                LayoutInflater inflater = LayoutInflater.from(context);
+                convertView = inflater.inflate(R.layout.app_protection_item, parent, false);
+            }
+
+            ImageButton pinButton = convertView.findViewById(R.id.btn_pin_app);
+            ImageView iconView = convertView.findViewById(R.id.app_protection_icon);
+            TextView nameView = convertView.findViewById(R.id.app_protection_name);
+            Spinner spinner = convertView.findViewById(R.id.app_protection_spinner);
+            LinearLayout pendingArea = convertView.findViewById(R.id.app_protection_pending_area);
+            TextView pendingTimer = convertView.findViewById(R.id.app_protection_pending_timer);
+            Button applyButton = convertView.findViewById(R.id.btn_apply_app_protection);
+            Button cancelButton = convertView.findViewById(R.id.btn_cancel_app_protection);
+
+            AppProtectionInfo app = filteredList.get(position);
+            iconView.setImageDrawable(app.icon);
+            nameView.setText(app.appName);
+            
+            // Check for pending action
+            String pendingKey = "app_protection_" + app.packageName;
+            PendingAction pendingAction = pendingActions.get(pendingKey);
+            
+            if (pendingAction != null) {
+                pendingArea.setVisibility(View.VISIBLE);
+                long remainingMs = pendingAction.getRemainingMillis();
+                long totalSeconds = remainingMs / 1000;
+                
+                // Format time
+                long days = totalSeconds / (24 * 3600);
+                long hours = (totalSeconds % (24 * 3600)) / 3600;
+                long minutes = (totalSeconds % 3600) / 60;
+                long seconds = totalSeconds % 60;
+                
+                StringBuilder timeStr = new StringBuilder();
+                if (days > 0) timeStr.append(days).append("d ");
+                if (hours > 0 || days > 0) timeStr.append(hours).append("h ");
+                timeStr.append(minutes).append("m ");
+                timeStr.append(seconds).append("s");
+                
+                pendingTimer.setText("⏱️ Protection change pending: " + timeStr);
+                
+                if (pendingAction.isExpired()) {
+                    applyButton.setVisibility(View.VISIBLE);
+                    pendingTimer.setText("✅ Ready to apply protection change");
+                } else {
+                    applyButton.setVisibility(View.GONE);
+                }
+                
+                applyButton.setOnClickListener(v -> {
+                    pendingActions.remove(pendingKey);
+                    // Apply the status change
+                    updateAppProtectionStatusImmediate(app, pendingAction.data);
+                    notifyDataSetChanged();
+                });
+                
+                cancelButton.setOnClickListener(v -> {
+                    pendingActions.remove(pendingKey);
+                    notifyDataSetChanged();
+                });
+            } else {
+                pendingArea.setVisibility(View.GONE);
+            }
+            
+            // Update pin button icon
+            if (app.isPinned) {
+                pinButton.setImageResource(android.R.drawable.star_big_on);
+            } else {
+                pinButton.setImageResource(android.R.drawable.star_big_off);
+            }
+            
+            // Handle pin button click
+            pinButton.setOnClickListener(v -> {
+                app.isPinned = !app.isPinned;
+                
+                // Save to prefs
+                Set<String> pinnedApps = new HashSet<>(prefs.getStringSet("pinned_apps", new HashSet<>()));
+                if (app.isPinned) {
+                    pinnedApps.add(app.packageName);
+                } else {
+                    pinnedApps.remove(app.packageName);
+                }
+                prefs.edit().putStringSet("pinned_apps", pinnedApps).apply();
+                
+                // Reload list to re-sort
+                loadProtectionApps();
+            });
+
+            ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(
+                context,
+                android.R.layout.simple_spinner_item,
+                statusOptions
+            );
+            spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinner.setAdapter(spinnerAdapter);
+
+            // Set current status
+            int selectedIndex = 0;
+            if (app.status.equals("blocked")) selectedIndex = 1;
+            else if (app.status.equals("protected")) selectedIndex = 2;
+            spinner.setSelection(selectedIndex, false);
+
+            spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int statusIndex, long id) {
+                    String oldStatus = app.status;
+                    String newStatus;
+                    if (statusIndex == 1) newStatus = "blocked";
+                    else if (statusIndex == 2) newStatus = "protected";
+                    else newStatus = "default";
+
+                    if (!oldStatus.equals(newStatus)) {
+                        updateAppProtectionStatus(app, newStatus);
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
+            });
+
+            return convertView;
+        }
+
+        private void updateAppProtectionStatus(AppProtectionInfo app, String newStatus) {
+            // Check if protection is locked
+            if (isProtectionLocked()) {
+                long lockUntil = prefs.getLong("protection_locked_until", 0);
+                long delayMinutes = prefs.getLong("protection_delay_minutes", 0);
+                long delayMillis = delayMinutes * 60 * 1000L;
+                
+                if (delayMillis > 0) {
+                    String pendingKey = "app_protection_" + app.packageName;
+                    PendingAction action = new PendingAction(
+                        PendingAction.ActionType.APP_PROTECTION_CHANGE,
+                        pendingKey,
+                        newStatus,
+                        delayMillis
+                    );
+                    pendingActions.put(pendingKey, action);
+                    notifyDataSetChanged();
+                    startPendingActionsUpdater();
+                    return;
+                }
+            }
+            
+            // If not locked, apply immediately
+            updateAppProtectionStatusImmediate(app, newStatus);
+        }
+
+        private void updateAppProtectionStatusImmediate(AppProtectionInfo app, String newStatus) {
+            if (!dpm.isDeviceOwnerApp(getPackageName())) {
+                Toast.makeText(context, "⚠️ Not Device Owner", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Set<String> blockedApps = new HashSet<>(prefs.getStringSet("blocked_apps", new HashSet<>()));
+            Set<String> protectedApps = new HashSet<>(prefs.getStringSet("protected_apps", new HashSet<>()));
+
+            // Remove from old status
+            blockedApps.remove(app.packageName);
+            protectedApps.remove(app.packageName);
+            
+            // Unblock/unprotect
+            try {
+                // Unsuspend the app
+                String[] packages = {app.packageName};
+                String[] unsuspended = dpm.setPackagesSuspended(adminComponent, packages, false);
+                
+                dpm.setUninstallBlocked(adminComponent, app.packageName, false);
+                
+                // Remove from user control disabled list
+                List<String> disabledPackages = dpm.getUserControlDisabledPackages(adminComponent);
+                if (disabledPackages.contains(app.packageName)) {
+                    List<String> newList = new ArrayList<>(disabledPackages);
+                    newList.remove(app.packageName);
+                    dpm.setUserControlDisabledPackages(adminComponent, newList);
+                }
+            } catch (Exception e) {
+                Toast.makeText(context, "⚠️ Unsuspend error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+
+            // Apply new status
+            try {
+                if (newStatus.equals("blocked")) {
+                    // Suspend the app (grayed out, can't launch)
+                    String[] packages = {app.packageName};
+                    String[] suspended = dpm.setPackagesSuspended(adminComponent, packages, true);
+                    
+                    if (suspended == null || suspended.length == 0) {
+                        // Also protect from data clearing
+                        List<String> disabledPackages = new ArrayList<>(dpm.getUserControlDisabledPackages(adminComponent));
+                        if (!disabledPackages.contains(app.packageName)) {
+                            disabledPackages.add(app.packageName);
+                            dpm.setUserControlDisabledPackages(adminComponent, disabledPackages);
+                        }
+                        
+                        blockedApps.add(app.packageName);
+                        Toast.makeText(context, "✅ App suspended (blocked + data protected)", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(context, "⚠️ Failed to suspend app", Toast.LENGTH_SHORT).show();
+                    }
+                } else if (newStatus.equals("protected")) {
+                    dpm.setUninstallBlocked(adminComponent, app.packageName, true);
+                    
+                    // Add to user control disabled list - prevents uninstall, force stop, and data clearing
+                    List<String> disabledPackages = new ArrayList<>(dpm.getUserControlDisabledPackages(adminComponent));
+                    if (!disabledPackages.contains(app.packageName)) {
+                        disabledPackages.add(app.packageName);
+                        dpm.setUserControlDisabledPackages(adminComponent, disabledPackages);
+                    }
+                    
+                    protectedApps.add(app.packageName);
+                    Toast.makeText(context, "✅ App protected (uninstall + data)", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(context, "✅ Status reset to default", Toast.LENGTH_SHORT).show();
+                }
+
+                app.status = newStatus;
+                prefs.edit()
+                    .putStringSet("blocked_apps", blockedApps)
+                    .putStringSet("protected_apps", protectedApps)
+                    .apply();
+
+            } catch (Exception e) {
+                Toast.makeText(context, "❌ Failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        }
+
+        @Override
+        public android.widget.Filter getFilter() {
+            return new android.widget.Filter() {
+                @Override
+                protected FilterResults performFiltering(CharSequence constraint) {
+                    FilterResults results = new FilterResults();
+                    List<AppProtectionInfo> filtered = new ArrayList<>();
+
+                    if (constraint == null || constraint.length() == 0) {
+                        filtered.addAll(originalList);
+                    } else {
+                        String filterPattern = constraint.toString().toLowerCase().trim();
+                        for (AppProtectionInfo app : originalList) {
+                            if (app.appName.toLowerCase().contains(filterPattern) ||
+                                app.packageName.toLowerCase().contains(filterPattern)) {
+                                filtered.add(app);
+                            }
+                        }
+                    }
+
+                    results.values = filtered;
+                    results.count = filtered.size();
+                    return results;
+                }
+
+                @Override
+                protected void publishResults(CharSequence constraint, FilterResults results) {
+                    filteredList = (List<AppProtectionInfo>) results.values;
+                    notifyDataSetChanged();
+                }
+            };
+        }
     }
 }

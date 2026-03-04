@@ -3,41 +3,48 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center">
+    android:padding="16dp">
 
     <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="App Protection &amp; Blocking"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Manage app blocking and protection settings"
-        android:textSize="14sp"
-        android:textColor="#666666"
-        android:layout_marginBottom="32dp"
-        android:gravity="center" />
-
-    <Button
-        android:id="@+id/btn_app_protection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Manage App Protection &amp; Blocking"
-        android:textSize="16sp"
-        android:padding="16dp" />
+        android:text="App Protection Manager"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
+        android:paddingBottom="8dp" />
 
     <TextView
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Block = Suspend app (grayed) • Protect = Prevent uninstall + data clear"
+        android:text="Block = Suspend app + Protect data\nProtect = Prevent uninstall + Protect data"
         android:textSize="12sp"
-        android:textColor="#666666"
-        android:layout_marginTop="16dp"
-        android:gravity="center" />
+        android:textColor="?android:attr/textColorSecondary"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_unhide_all"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Unhide All Hidden Apps"
+        android:textAllCaps="false"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/search_apps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="🔍 Search apps..."
+        android:textColorHint="?android:attr/textColorHint"
+        android:textColor="?android:attr/textColorPrimary"
+        android:padding="12dp"
+        android:elevation="8dp"
+        android:background="?android:attr/colorBackground" />
+
+    <ListView
+        android:id="@+id/apps_protection_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp" />
 
 </LinearLayout>

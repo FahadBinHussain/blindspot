@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1a1a1a"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LSPosed/Xposed Hooks"
+            android:textSize="24sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="BlindSpot includes the following Xposed hooks for app behavior modification"
+            android:textSize="12sp"
+            android:textColor="#CCCCCC"
+            android:gravity="center"
+            android:paddingBottom="24dp" />
+
+        <!-- Hook 1: Morphe -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="#2a2a2a"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/icon_morphe"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="16dp"
+                android:src="@android:drawable/ic_menu_gallery" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Morphe Content Watchdog"
+                    android:textSize="18sp"
+                    android:textColor="#4CAF50"
+                    android:textStyle="bold"
+                    android:paddingBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Package: app.morphe.android.youtube"
+                    android:textSize="11sp"
+                    android:textColor="#888888"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Hooks TextView display and setText methods to monitor all on-screen text. Automatically detects forbidden content and immediately closes the app when detected. Provides content filtering and parental control functionality."
+                    android:textSize="13sp"
+                    android:textColor="#FFFFFF"
+                    android:lineSpacingMultiplier="1.2" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Hook 2: Messenger -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="#2a2a2a"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/icon_messenger"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="16dp"
+                android:src="@android:drawable/ic_menu_gallery" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Messenger Ghost-Touch Protection"
+                    android:textSize="18sp"
+                    android:textColor="#4CAF50"
+                    android:textStyle="bold"
+                    android:paddingBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Package: com.facebook.orca"
+                    android:textSize="11sp"
+                    android:textColor="#888888"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Hooks View.requestFocus and View.onAttachedToWindow to block Meta AI search features. Removes and disables search bars, Meta AI prompts, and unwanted UI elements. Blocks focus requests to prevent keyboard from appearing on blocked elements. Whitelists stickers, emojis, and GIFs while blocking search functionality."
+                    android:textSize="13sp"
+                    android:textColor="#FFFFFF"
+                    android:lineSpacingMultiplier="1.2" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Hook 3: Facebook -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="#2a2a2a"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/icon_facebook"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="16dp"
+                android:src="@android:drawable/ic_menu_gallery" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Facebook Scroll-Lock &amp; Feed Blocker"
+                    android:textSize="18sp"
+                    android:textColor="#4CAF50"
+                    android:textStyle="bold"
+                    android:paddingBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Package: com.facebook.katana"
+                    android:textSize="11sp"
+                    android:textColor="#888888"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Hooks Activity lifecycle (onCreate, onNewIntent, onResume) and touch events (dispatchTouchEvent) to prevent feed browsing. Blocks scrolling by detecting touch movement above threshold. Detects and blocks multi-touch gestures. Automatically closes app when feed is accessed. Allows only direct links (messenger, profile, groups). Prevents doom-scrolling and time-wasting on Facebook feed."
+                    android:textSize="13sp"
+                    android:textColor="#FFFFFF"
+                    android:lineSpacingMultiplier="1.2" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Installation Note -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#3a3a3a"
+            android:padding="16dp"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⚙️ Installation Requirements"
+                android:textSize="16sp"
+                android:textColor="#FFA500"
+                android:textStyle="bold"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• LSPosed or EdXposed framework must be installed\n• Enable BlindSpot module in LSPosed Manager\n• Select target apps (Morphe, Messenger, Facebook) in module scope\n• Force stop target apps for hooks to take effect\n• Hooks are defined in MorpheHook.java, MessengerHook.java, and FacebookHook.java"
+                android:textSize="14sp"
+                android:textColor="#CCCCCC"
+                android:lineSpacingMultiplier="1.3" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
