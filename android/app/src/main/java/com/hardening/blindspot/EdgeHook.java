@@ -55,6 +55,11 @@ public class EdgeHook implements IXposedHookLoadPackage {
                         View view = (View) param.args[0];
                         String className = view.getClass().getName();
 
+                        // Check if hook is enabled via ContentProvider
+                        if (!isHookEnabled(view.getContext())) {
+                            return;
+                        }
+
                         // Detect popup menu windows
                         if (className.contains("DecorView") || className.contains("Popup")) {
                             Log.e(TAG, "=== POPUP WINDOW DETECTED: " + className + " ===");
