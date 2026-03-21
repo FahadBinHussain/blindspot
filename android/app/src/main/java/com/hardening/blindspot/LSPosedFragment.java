@@ -25,11 +25,11 @@ public class LSPosedFragment extends Fragment {
     private Handler pendingUpdater;
     private Runnable updaterRunnable;
     
-    private LinearLayout morphePendingArea, messengerPendingArea, facebookPendingArea;
-    private TextView morphePendingTimer, messengerPendingTimer, facebookPendingTimer;
-    private Button morphePendingApply, messengerPendingApply, facebookPendingApply;
-    private Button morphePendingCancel, messengerPendingCancel, facebookPendingCancel;
-    private Switch morpheSwitch, messengerSwitch, facebookSwitch;
+    private LinearLayout morphePendingArea, messengerPendingArea, facebookPendingArea, edgePendingArea;
+    private TextView morphePendingTimer, messengerPendingTimer, facebookPendingTimer, edgePendingTimer;
+    private Button morphePendingApply, messengerPendingApply, facebookPendingApply, edgePendingApply;
+    private Button morphePendingCancel, messengerPendingCancel, facebookPendingCancel, edgePendingCancel;
+    private Switch morpheSwitch, messengerSwitch, facebookSwitch, edgeSwitch;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.tab_lsposed, container, false);
@@ -44,10 +44,12 @@ public class LSPosedFragment extends Fragment {
         loadAppIcon(view, R.id.icon_morphe, "app.morphe.android.youtube", pm);
         loadAppIcon(view, R.id.icon_messenger, "com.facebook.orca", pm);
         loadAppIcon(view, R.id.icon_facebook, "com.facebook.katana", pm);
+        loadAppIcon(view, R.id.icon_edge, "com.microsoft.emmx", pm);
         
         morpheSwitch = view.findViewById(R.id.switch_hook_morphe);
         messengerSwitch = view.findViewById(R.id.switch_hook_messenger);
         facebookSwitch = view.findViewById(R.id.switch_hook_facebook);
+        edgeSwitch = view.findViewById(R.id.switch_hook_edge);
         
         morphePendingArea = view.findViewById(R.id.pending_morphe_area);
         morphePendingTimer = view.findViewById(R.id.pending_morphe_timer);
@@ -64,10 +66,16 @@ public class LSPosedFragment extends Fragment {
         facebookPendingApply = view.findViewById(R.id.pending_facebook_apply);
         facebookPendingCancel = view.findViewById(R.id.pending_facebook_cancel);
         
+        edgePendingArea = view.findViewById(R.id.pending_edge_area);
+        edgePendingTimer = view.findViewById(R.id.pending_edge_timer);
+        edgePendingApply = view.findViewById(R.id.pending_edge_apply);
+        edgePendingCancel = view.findViewById(R.id.pending_edge_cancel);
+        
         boolean morpheEnabled = prefs.getBoolean("hook_morphe_enabled", true);
         morpheSwitch.setChecked(morpheEnabled);
         messengerSwitch.setChecked(prefs.getBoolean("hook_messenger_enabled", true));
         facebookSwitch.setChecked(prefs.getBoolean("hook_facebook_enabled", true));
+        edgeSwitch.setChecked(prefs.getBoolean("hook_edge_enabled", true));
         
         writeMorphePreferenceFile(morpheEnabled);
         
@@ -91,6 +99,11 @@ public class LSPosedFragment extends Fragment {
         facebookSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             handleHookToggle("facebook", MainActivity.PendingAction.ActionType.HOOK_FACEBOOK_TOGGLE, 
                            isChecked, facebookSwitch);
+        });
+        
+        edgeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            handleHookToggle("edge", MainActivity.PendingAction.ActionType.HOOK_EDGE_TOGGLE, 
+                           isChecked, edgeSwitch);
         });
     }
     
@@ -192,6 +205,24 @@ public class LSPosedFragment extends Fragment {
             facebookSwitch.setChecked(prefs.getBoolean("hook_facebook_enabled", true));
             updatePendingUI();
         });
+        
+        edgePendingApply.setOnClickListener(v -> {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            MainActivity.PendingAction action = mainActivity.getPendingAction("hook_edge_toggle");
+            if (action != null) {
+                applyHookToggle("edge", Boolean.parseBoolean(action.data));
+                edgeSwitch.setChecked(Boolean.parseBoolean(action.data));
+                mainActivity.removePendingAction("hook_edge_toggle");
+                updatePendingUI();
+            }
+        });
+        
+        edgePendingCancel.setOnClickListener(v -> {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            mainActivity.removePendingAction("hook_edge_toggle");
+            edgeSwitch.setChecked(prefs.getBoolean("hook_edge_enabled", true));
+            updatePendingUI();
+        });
     }
     
     private void setupInfoIcons(View view) {
@@ -215,6 +246,14 @@ public class LSPosedFragment extends Fragment {
             new android.app.AlertDialog.Builder(getActivity())
                 .setTitle("Facebook Scroll-Lock & Feed Blocker")
                 .setMessage(R.string.hook_facebook_description)
+                .setPositiveButton("OK", null)
+                .show();
+        });
+        
+        view.findViewById(R.id.info_edge).setOnClickListener(v -> {
+            new android.app.AlertDialog.Builder(getActivity())
+                .setTitle("Edge Preview Page Blocker")
+                .setMessage("Disables preview page options in Edge browser context menus. This prevents users from accessing preview functionality when long-pressing links or accessing context menus.")
                 .setPositiveButton("OK", null)
                 .show();
         });
@@ -250,6 +289,8 @@ public class LSPosedFragment extends Fragment {
                            messengerPendingArea, messengerPendingTimer, messengerPendingApply);
         updateHookPendingUI("facebook", mainActivity.getPendingAction("hook_facebook_toggle"),
                            facebookPendingArea, facebookPendingTimer, facebookPendingApply);
+        updateHookPendingUI("edge", mainActivity.getPendingAction("hook_edge_toggle"),
+                           edgePendingArea, edgePendingTimer, edgePendingApply);
     }
     
     private void updateHookPendingUI(String hookName, MainActivity.PendingAction pendingAction,

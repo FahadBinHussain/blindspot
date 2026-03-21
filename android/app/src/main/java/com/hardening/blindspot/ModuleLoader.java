@@ -23,5 +23,13 @@ public class ModuleLoader implements IXposedHookLoadPackage {
             Log.i(TAG, "Morphe detected. Loading MorpheHook...");
             new MorpheHook().handleLoadPackage(lpparam);
         }
+        
+        // --- EDGE HOOK ---
+        if (lpparam.packageName.equals("com.microsoft.emmx") || 
+            lpparam.packageName.equals("com.microsoft.msedge") || 
+            lpparam.packageName.equals("com.android.chrome")) {
+            Log.i(TAG, "Edge/Chrome detected. Loading EdgeHook...");
+            new EdgeHook().handleLoadPackage(lpparam);
+        }
     }
 }
