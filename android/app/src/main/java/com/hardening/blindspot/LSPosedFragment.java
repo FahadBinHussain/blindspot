@@ -25,11 +25,11 @@ public class LSPosedFragment extends Fragment {
     private Handler pendingUpdater;
     private Runnable updaterRunnable;
     
-    private LinearLayout morphePendingArea, messengerPendingArea, facebookPendingArea, edgePendingArea;
-    private TextView morphePendingTimer, messengerPendingTimer, facebookPendingTimer, edgePendingTimer;
-    private Button morphePendingApply, messengerPendingApply, facebookPendingApply, edgePendingApply;
-    private Button morphePendingCancel, messengerPendingCancel, facebookPendingCancel, edgePendingCancel;
-    private Switch morpheSwitch, messengerSwitch, facebookSwitch, edgeSwitch;
+    private LinearLayout morphePendingArea, messengerPendingArea, facebookPendingArea, edgePendingArea, redditPendingArea;
+    private TextView morphePendingTimer, messengerPendingTimer, facebookPendingTimer, edgePendingTimer, redditPendingTimer;
+    private Button morphePendingApply, messengerPendingApply, facebookPendingApply, edgePendingApply, redditPendingApply;
+    private Button morphePendingCancel, messengerPendingCancel, facebookPendingCancel, edgePendingCancel, redditPendingCancel;
+    private Switch morpheSwitch, messengerSwitch, facebookSwitch, edgeSwitch, redditSwitch;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.tab_lsposed, container, false);
@@ -45,11 +45,13 @@ public class LSPosedFragment extends Fragment {
         loadAppIcon(view, R.id.icon_messenger, "com.facebook.orca", pm);
         loadAppIcon(view, R.id.icon_facebook, "com.facebook.katana", pm);
         loadAppIcon(view, R.id.icon_edge, "com.microsoft.emmx", pm);
+        loadAppIcon(view, R.id.icon_reddit, "com.reddit.frontpage", pm);
         
         morpheSwitch = view.findViewById(R.id.switch_hook_morphe);
         messengerSwitch = view.findViewById(R.id.switch_hook_messenger);
         facebookSwitch = view.findViewById(R.id.switch_hook_facebook);
         edgeSwitch = view.findViewById(R.id.switch_hook_edge);
+        redditSwitch = view.findViewById(R.id.switch_hook_reddit);
         
         morphePendingArea = view.findViewById(R.id.pending_morphe_area);
         morphePendingTimer = view.findViewById(R.id.pending_morphe_timer);
@@ -71,11 +73,17 @@ public class LSPosedFragment extends Fragment {
         edgePendingApply = view.findViewById(R.id.pending_edge_apply);
         edgePendingCancel = view.findViewById(R.id.pending_edge_cancel);
         
+        redditPendingArea = view.findViewById(R.id.pending_reddit_area);
+        redditPendingTimer = view.findViewById(R.id.pending_reddit_timer);
+        redditPendingApply = view.findViewById(R.id.pending_reddit_apply);
+        redditPendingCancel = view.findViewById(R.id.pending_reddit_cancel);
+        
         boolean morpheEnabled = prefs.getBoolean("hook_morphe_enabled", true);
         morpheSwitch.setChecked(morpheEnabled);
         messengerSwitch.setChecked(prefs.getBoolean("hook_messenger_enabled", true));
         facebookSwitch.setChecked(prefs.getBoolean("hook_facebook_enabled", true));
         edgeSwitch.setChecked(prefs.getBoolean("hook_edge_enabled", true));
+        redditSwitch.setChecked(prefs.getBoolean("hook_reddit_enabled", true));
         
         writeMorphePreferenceFile(morpheEnabled);
         
@@ -104,6 +112,11 @@ public class LSPosedFragment extends Fragment {
         edgeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             handleHookToggle("edge", MainActivity.PendingAction.ActionType.HOOK_EDGE_TOGGLE, 
                            isChecked, edgeSwitch);
+        });
+        
+        redditSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            handleHookToggle("reddit", MainActivity.PendingAction.ActionType.HOOK_REDDIT_TOGGLE, 
+                           isChecked, redditSwitch);
         });
     }
     
@@ -223,6 +236,24 @@ public class LSPosedFragment extends Fragment {
             edgeSwitch.setChecked(prefs.getBoolean("hook_edge_enabled", true));
             updatePendingUI();
         });
+        
+        redditPendingApply.setOnClickListener(v -> {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            MainActivity.PendingAction action = mainActivity.getPendingAction("hook_reddit_toggle");
+            if (action != null) {
+                applyHookToggle("reddit", Boolean.parseBoolean(action.data));
+                redditSwitch.setChecked(Boolean.parseBoolean(action.data));
+                mainActivity.removePendingAction("hook_reddit_toggle");
+                updatePendingUI();
+            }
+        });
+        
+        redditPendingCancel.setOnClickListener(v -> {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            mainActivity.removePendingAction("hook_reddit_toggle");
+            redditSwitch.setChecked(prefs.getBoolean("hook_reddit_enabled", true));
+            updatePendingUI();
+        });
     }
     
     private void setupInfoIcons(View view) {
@@ -254,6 +285,14 @@ public class LSPosedFragment extends Fragment {
             new android.app.AlertDialog.Builder(getActivity())
                 .setTitle("Edge Preview Page Blocker")
                 .setMessage("Disables preview page options in Edge browser context menus. This prevents users from accessing preview functionality when long-pressing links or accessing context menus.")
+                .setPositiveButton("OK", null)
+                .show();
+        });
+        
+        view.findViewById(R.id.info_reddit).setOnClickListener(v -> {
+            new android.app.AlertDialog.Builder(getActivity())
+                .setTitle("Reddit Text Selector")
+                .setMessage("Enables text selection on Reddit posts and comments to allow partial copying.")
                 .setPositiveButton("OK", null)
                 .show();
         });
@@ -291,6 +330,8 @@ public class LSPosedFragment extends Fragment {
                            facebookPendingArea, facebookPendingTimer, facebookPendingApply);
         updateHookPendingUI("edge", mainActivity.getPendingAction("hook_edge_toggle"),
                            edgePendingArea, edgePendingTimer, edgePendingApply);
+        updateHookPendingUI("reddit", mainActivity.getPendingAction("hook_reddit_toggle"),
+                           redditPendingArea, redditPendingTimer, redditPendingApply);
     }
     
     private void updateHookPendingUI(String hookName, MainActivity.PendingAction pendingAction,

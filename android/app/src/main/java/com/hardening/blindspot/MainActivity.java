@@ -117,7 +117,8 @@ public class MainActivity extends FragmentActivity {
             HOOK_MORPHE_TOGGLE,
             HOOK_MESSENGER_TOGGLE,
             HOOK_FACEBOOK_TOGGLE,
-            HOOK_EDGE_TOGGLE
+            HOOK_EDGE_TOGGLE,
+            HOOK_REDDIT_TOGGLE
         }
         
         public ActionType type;

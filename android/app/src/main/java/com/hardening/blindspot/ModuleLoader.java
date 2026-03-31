@@ -31,5 +31,11 @@ public class ModuleLoader implements IXposedHookLoadPackage {
             Log.i(TAG, "Edge/Chrome detected. Loading EdgeHook...");
             new EdgeHook().handleLoadPackage(lpparam);
         }
+        
+        // --- REDDIT HOOK ---
+        if (lpparam.packageName.equals("com.reddit.frontpage")) {
+            Log.i(TAG, "Reddit detected. Loading RedditHook...");
+            new RedditHook().handleLoadPackage(lpparam);
+        }
     }
 }
