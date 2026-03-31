@@ -1,4 +1,4 @@
-# BlindSpot - Android Device Admin & Protection Manager# blindspot
+# BlindSpot - Android Device Admin & Protection Manager
 
 **BlindSpot** is a powerful Android Device Owner application that provides comprehensive app management, protection mechanisms, and Xposed framework hooks for enhanced control over your device.
 
