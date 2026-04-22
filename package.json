@@ -1,0 +1,26 @@
+{
+  "name": "blindspot",
+  "version": "1.0.0",
+  "description": "BlindSpot - Android Xposed Module for App Hardening",
+  "scripts": {
+    "android:build": "powershell -NoProfile -Command \"$gradle = Get-ChildItem -Path $env:USERPROFILE'\\.gradle\\wrapper\\dists' -Recurse -Filter gradle.bat | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName; if (-not $gradle) { throw 'No cached Gradle found. Build any gradle project once or add gradlew wrapper files.' }; & $gradle -p android assembleDebug\"",
+    "android:build:release": "powershell -NoProfile -Command \"$gradle = Get-ChildItem -Path $env:USERPROFILE'\\.gradle\\wrapper\\dists' -Recurse -Filter gradle.bat | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName; if (-not $gradle) { throw 'No cached Gradle found. Build any gradle project once or add gradlew wrapper files.' }; & $gradle -p android assembleRelease\"",
+    "android:install": "powershell -NoProfile -Command \"$gradle = Get-ChildItem -Path $env:USERPROFILE'\\.gradle\\wrapper\\dists' -Recurse -Filter gradle.bat | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName; if (-not $gradle) { throw 'No cached Gradle found. Build any gradle project once or add gradlew wrapper files.' }; & $gradle -p android installDebug\"",
+    "android:run": "powershell -NoProfile -Command \"$gradle = Get-ChildItem -Path $env:USERPROFILE'\\.gradle\\wrapper\\dists' -Recurse -Filter gradle.bat | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName; if (-not $gradle) { throw 'No cached Gradle found. Build any gradle project once or add gradlew wrapper files.' }; & $gradle -p android installDebug; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & adb shell am start -n com.hardening.blindspot/.MainActivity\"",
+    "android:clean": "powershell -NoProfile -Command \"$gradle = Get-ChildItem -Path $env:USERPROFILE'\\.gradle\\wrapper\\dists' -Recurse -Filter gradle.bat | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName; if (-not $gradle) { throw 'No cached Gradle found. Build any gradle project once or add gradlew wrapper files.' }; & $gradle -p android clean\"",
+    "android:release:apk": "powershell -NoProfile -Command \"$gradle = Get-ChildItem -Path $env:USERPROFILE'\\.gradle\\wrapper\\dists' -Recurse -Filter gradle.bat | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName; if (-not $gradle) { throw 'No cached Gradle found. Build any gradle project once or add gradlew wrapper files.' }; & $gradle -p android assembleRelease; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Copy-Item -Path 'android\\app\\release\\blindspot.apk' -Destination 'blindspot-release.apk' -Force -ErrorAction SilentlyContinue\"",
+    "adb:devices": "adb devices",
+    "adb:logcat": "adb logcat -s BLINDSPOT_LOADER:* BLINDSPOT:* BLINDSPOT_FB:* BLINDSPOT_X:* BLINDSPOT_EDGE:* BLINDSPOT_MORPHE:*",
+    "adb:logcat:all": "adb logcat",
+    "adb:uninstall": "adb uninstall com.hardening.blindspot"
+  },
+  "keywords": [
+    "android",
+    "xposed",
+    "lsposed",
+    "module",
+    "hardening"
+  ],
+  "author": "",
+  "license": "ISC"
+}

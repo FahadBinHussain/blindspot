@@ -37,5 +37,11 @@ public class ModuleLoader implements IXposedHookLoadPackage {
             Log.i(TAG, "Reddit detected. Loading RedditHook...");
             new RedditHook().handleLoadPackage(lpparam);
         }
+        
+        // --- X/TWITTER HOOK ---
+        if (lpparam.packageName.equals("com.twitter.android")) {
+            Log.i(TAG, "X/Twitter detected. Loading XHook...");
+            new XHook().handleLoadPackage(lpparam);
+        }
     }
 }
